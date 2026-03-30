@@ -9,13 +9,13 @@ import { useAuthContext } from '../../../providers/AuthProvider';
 const BASE = '/dashboard/patient';
 
 const NAV_LINKS = [
-  { to: BASE,                         label: 'Dashboard',      icon: LayoutDashboard, end: true },
-  { to: `${BASE}/appointments`,        label: 'Find Doctors',   icon: Calendar },
-  { to: `${BASE}/bookings`,            label: 'My Bookings',    icon: BookOpen },
-  { to: `${BASE}/digital-twin`,        label: 'Digital Twin',   icon: Activity },
-  { to: `${BASE}/records`,             label: 'Records',        icon: ClipboardList },
-  { to: `${BASE}/pharmacy`,            label: 'Pharmacy',       icon: Pill },
-  { to: `${BASE}/therapy-groups`,      label: 'Therapy',        icon: Users },
+  { to: BASE, label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: `${BASE}/appointments`, label: 'Find Doctors', icon: Calendar },
+  { to: `${BASE}/bookings`, label: 'My Bookings', icon: BookOpen },
+  { to: `${BASE}/digital-twin`, label: 'Digital Twin', icon: Activity },
+  { to: `${BASE}/records`, label: 'Records', icon: ClipboardList },
+  { to: `${BASE}/pharmacy`, label: 'Pharmacy', icon: Pill },
+  { to: `${BASE}/therapy-groups`, label: 'Therapy', icon: Users },
 ];
 
 export default function PatientNavbar() {
@@ -29,10 +29,9 @@ export default function PatientNavbar() {
   };
 
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-      isActive
-        ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-        : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
+    `flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive
+      ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+      : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
     }`;
 
   return (

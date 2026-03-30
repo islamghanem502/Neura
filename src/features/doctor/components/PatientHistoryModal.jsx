@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   X, Loader2, AlertCircle, Calendar, Stethoscope,
   Activity, Pill, FileText, ChevronRight, History,
-  User, ClipboardList, Thermometer
+  User, ClipboardList, Thermometer, Maximize2, Minimize2
 } from 'lucide-react';
 import { getPatientMedicalHistory } from '../../../api/medicalRecordService';
 
@@ -19,6 +19,15 @@ const formatDate = (dateStr) => {
 };
 
 export default function PatientHistoryModal({ patientId, patientName, isOpen, onClose }) {
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Reset full-screen state when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setTimeout(() => setIsFullScreen(false), 300); // Wait for exit animation if any
+    }
+  }, [isOpen]);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['patientHistory', patientId],
     queryFn: () => getPatientMedicalHistory(patientId, { limit: 50 }),
@@ -30,7 +39,7 @@ export default function PatientHistoryModal({ patientId, patientName, isOpen, on
   const records = data?.data || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-500 ${isFullScreen ? 'p-0' : 'p-4 md:p-8'}`}>
       {/* Backdrop with stronger blur */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity duration-500"
@@ -38,7 +47,9 @@ export default function PatientHistoryModal({ patientId, patientName, isOpen, on
       />
 
       {/* Modal Window */}
-      <div className="relative w-full max-w-5xl h-[85vh] flex flex-col bg-white/95 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] overflow-hidden border border-white/20 animate-in fade-in zoom-in-95 duration-400">
+      <div className={`relative flex flex-col bg-white/95 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] overflow-hidden border border-white/20 animate-in fade-in zoom-in-95 duration-400 transition-all ${
+        isFullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-5xl h-[85vh] rounded-[2.5rem]'
+      }`}>
 
         {/* Header - More Elegant */}
         <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-white/50 backdrop-blur-md sticky top-0 z-20">
@@ -56,12 +67,25 @@ export default function PatientHistoryModal({ patientId, patientName, isOpen, on
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="group w-11 h-11 rounded-full bg-slate-100 hover:bg-red-50 flex items-center justify-center text-slate-500 hover:text-red-500 transition-all duration-300"
-          >
-            <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="group w-11 h-11 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all duration-300"
+              title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+            >
+              {isFullScreen ? (
+                <Minimize2 className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+              ) : (
+                <Maximize2 className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+              )}
+            </button>
+            <button
+              onClick={onClose}
+              className="group w-11 h-11 rounded-full bg-slate-100 hover:bg-red-50 flex items-center justify-center text-slate-500 hover:text-red-500 transition-all duration-300"
+            >
+              <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
+            </button>
+          </div>
         </div>
 
         {/* Content Area */}
@@ -93,93 +117,81 @@ export default function PatientHistoryModal({ patientId, patientName, isOpen, on
               </p>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto space-y-12 relative">
+            <div className="max-w-2xl mx-auto relative pl-4 md:pl-0 pt-6">
               {/* Vertical Timeline Line */}
-              <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-100 via-indigo-200 to-transparent md:-translate-x-1/2 rounded-full hidden sm:block" />
+              <div className="absolute left-[4.5rem] md:left-[5.5rem] top-0 bottom-0 w-[1px] bg-slate-200/80 z-0 hidden sm:block" />
 
               {records.map((record, idx) => {
-                const dateInfo = formatDate(record.visitDate);
-                const docName = record.doctorId ? `Dr. ${record.doctorId.firstName} ${record.doctorId.lastName}` : 'General Consultant';
+                const dateObj = new Date(record.visitDate);
+                const day = dateObj.getDate();
+                const monthStr = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                const docName = record.doctorId ? `${record.doctorId.firstName} ${record.doctorId.lastName}` : 'General Consultant';
                 const ai = record.aiSummary || {};
+                
+                // Mock visual statuses to match the reference image colors (Teal, Red, Yellow)
+                const mockStatuses = [
+                  { label: 'Positive', bg: 'bg-[#00a693]', border: 'border-[#00a693]' },
+                  { label: 'Negative', bg: 'bg-[#e14b43]', border: 'border-[#e14b43]' },
+                  { label: 'Neutral', bg: 'bg-[#eab308]', border: 'border-[#eab308]' },
+                  { label: 'Positive', bg: 'bg-[#00a693]', border: 'border-[#00a693]' }
+                ];
+                const statusTheme = mockStatuses[idx % mockStatuses.length];
 
                 return (
-                  <div key={record._id} className="relative group">
-                    {/* Date Bubble - Desktop */}
-                    <div className="hidden md:flex absolute top-0 left-1/2 -translate-x-1/2 -translate-y-12 flex-col items-center z-10">
-                      <span className="bg-white px-4 py-1 rounded-full text-xs font-bold text-indigo-600 shadow-sm border border-indigo-50 whitespace-nowrap">
-                        {dateInfo.full}
-                      </span>
-                    </div>
-
-                    <div className={`flex flex-col md:flex-row items-start gap-8 ${idx % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
-
-                      {/* Left/Right Side Content */}
-                      <div className={`w-full md:w-1/2 flex ${idx % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
-                        <div className="w-full bg-white rounded-[2rem] p-6 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] group-hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                          {/* Top accent line */}
-                          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-400 to-violet-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-indigo-50 rounded-lg">
-                                <Stethoscope className="w-5 h-5 text-indigo-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-slate-800 leading-none">{docName}</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">{dateInfo.full}</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {ai.diagnosis && (
-                            <div className="mb-5">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Activity className="w-4 h-4 text-emerald-500" />
-                                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Confirmed Diagnosis</span>
-                              </div>
-                              <p className="text-slate-700 font-bold text-lg leading-snug">{ai.diagnosis}</p>
-                            </div>
-                          )}
-
-                          {ai.symptoms && ai.symptoms.length > 0 && (
-                            <div className="mb-5 flex flex-wrap gap-2">
-                              {ai.symptoms.map((sym, i) => (
-                                <span key={i} className="px-3 py-1 text-[11px] font-bold text-indigo-600 bg-indigo-50/50 rounded-full border border-indigo-100/50 hover:bg-indigo-100 transition-colors cursor-default">
-                                  {sym}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {(ai.prescription?.medications?.length > 0) && (
-                            <div className="mt-4 pt-5 border-t border-dashed border-slate-200">
-                              <div className="flex items-center gap-2 mb-3">
-                                <div className="w-6 h-6 rounded-full bg-amber-50 flex items-center justify-center">
-                                  <Pill className="w-3.5 h-3.5 text-amber-600" />
-                                </div>
-                                <span className="text-xs font-bold text-slate-500">Prescribed Regimen</span>
-                              </div>
-                              <div className="grid gap-2">
-                                {ai.prescription.medications.map((m, i) => (
-                                  <div key={i} className="flex items-center justify-between bg-slate-50/50 p-2.5 rounded-xl border border-slate-100/50 group/med">
-                                    <span className="text-sm font-bold text-slate-700">{m.name}</span>
-                                    {m.dose && <span className="text-[10px] font-bold text-indigo-500 bg-white px-2 py-0.5 rounded-md shadow-sm">{m.dose}</span>}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Spacer for MD screens to keep alignment with timeline */}
-                      <div className="hidden md:block w-0" />
+                  <div key={record._id} className="relative flex flex-col sm:flex-row items-start w-full mb-8 group z-10">
+                    
+                    {/* Date Column (Left) */}
+                    <div className="hidden sm:flex flex-col items-center justify-start w-16 md:w-20 shrink-0 pt-5 pr-2">
+                       <span className="text-lg font-extrabold text-[#1e293b] leading-none mb-0.5">{day}</span>
+                       <span className="text-sm font-bold text-slate-400 capitalize">{monthStr}</span>
                     </div>
 
                     {/* Timeline Center Dot */}
-                    <div className="hidden md:flex absolute top-4 left-1/2 -translate-x-1/2 items-center justify-center w-10 h-10 rounded-full border-4 border-[#f8fafc] bg-white shadow-md z-10 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-300">
-                      <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 group-hover:bg-white transition-colors" />
+                    <div className={`hidden sm:flex absolute left-[4.5rem] md:left-[5.5rem] w-3 h-3 rounded-full bg-white border-2 ${statusTheme.border} -translate-x-1/2 top-7 z-10 ring-4 ring-white transition-transform group-hover:scale-125`} />
+
+                    {/* Main Card (Right) */}
+                    <div className="flex-1 w-full sm:ml-6 relative">
+                      {/* Mobile Date Bubble */}
+                      <div className="sm:hidden flex items-center gap-2 mb-2">
+                         <span className="font-bold text-slate-800 text-base">{day}</span>
+                         <span className="font-semibold text-slate-500 text-sm">{monthStr}</span>
+                      </div>
+
+                      <div className="w-full bg-white rounded-xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-[#f1f5f9] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all">
+                        
+                        {/* Status Badge */}
+                        <div className="mb-3">
+                          <span className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-bold text-white shadow-sm tracking-wide ${statusTheme.bg}`}>
+                            {statusTheme.label}
+                          </span>
+                        </div>
+
+                        {/* Title (e.g. Encounter Type or Diagnosis) */}
+                        <h3 className="text-[17px] font-bold text-[#0f172a] mb-4 tracking-tight">
+                          {ai.diagnosis || 'General Consultation'}
+                        </h3>
+
+                        {/* Footer area inside card */}
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          {/* Given By ... */}
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-slate-400" />
+                            <span className="text-sm font-semibold text-[#64748b]">
+                              Given By {docName}
+                            </span>
+                          </div>
+
+                          {/* Classification Pill */}
+                          <div className="px-3 py-1 rounded-full border border-slate-200/80 bg-slate-50/50">
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              Management
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
                     </div>
+
                   </div>
                 );
               })}

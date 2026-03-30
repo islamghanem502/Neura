@@ -42,18 +42,18 @@ const DoctorLayout = () => {
 
     return (
         // الخلفية الرمادي الفاتح اللي بتدي مساحة للعناصر تظهر
-        <div className="flex h-screen bg-[#e2e8f0] p-4 gap-6 font-sans overflow-hidden relative">
-            
+        <div className="flex h-screen bg-[#e2e8f0] font-sans overflow-hidden relative">
+
             {/* Overlay if incomplete to show clear focus on completing profile */}
             {isProfileIncomplete && (
-              <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px] z-40 pointer-events-none rounded-[2rem] mx-4 my-4" />
+                <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px] z-40 pointer-events-none rounded-[2rem] mx-4 my-4" />
             )}
 
             {/* السايد بار */}
             <DoctorSidebar isLocked={isProfileIncomplete} />
 
             {/* منطقة المحتوى الرئيسية */}
-            <div className={`flex-1 flex flex-col overflow-hidden ${isProfileIncomplete ? 'relative z-50' : ''}`}>
+            <div className={`flex-1 flex flex-col overflow-hidden p-6 md:p-8 ${isProfileIncomplete ? 'relative z-50' : ''}`}>
 
                 {/* الهيدر الجديد - شفاف ومودرن زي الصورة الأولى */}
                 <header className="flex items-center justify-between mb-6 px-2 shrink-0">
@@ -77,7 +77,7 @@ const DoctorLayout = () => {
                         </button>
 
                         <div className="relative" ref={dropdownRef}>
-                            <div 
+                            <div
                                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                 className="flex items-center gap-3 bg-white pl-2 pr-4 py-1.5 rounded-full shadow-sm cursor-pointer hover:shadow-md transition-all"
                             >
@@ -94,7 +94,7 @@ const DoctorLayout = () => {
                             {isDropdownOpen && (
                                 <div className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                     <div className="p-2">
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setIsDropdownOpen(false);
                                                 navigate('/dashboard/doctor/my-profile');
@@ -104,7 +104,7 @@ const DoctorLayout = () => {
                                             <UserIcon size={16} /> Profile
                                         </button>
                                         <div className="h-px bg-slate-100 my-1 mx-2"></div>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setIsDropdownOpen(false);
                                                 logout();

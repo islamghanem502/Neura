@@ -2,15 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Header } from '../../components/Header';
 import { FeaturesSection } from './components/FeaturesSection';
 import { DoctorsSection } from './components/DoctorsSection';
-import { DigitalTwinVisual } from './components/DigitalTwinVisual';
 import { AISummaryVisual, GroupTherapyVisual } from './components/FeatureVisuals';
 import { Icons } from './components/Icons';
-import { ArrowRight, Check, Activity, Calendar } from 'lucide-react';
+import { ArrowRight, Check, Activity, Calendar, Mic, Pill, UserCheck, Users, HelpCircle, AlertCircle, RefreshCw, ChevronsRight, Mail, Phone, Facebook, Twitter, Instagram } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Particles imports
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadFull } from "tsparticles";
+import heroBg from './assets/landing_hero_image.png';
+import digitalTwinImg from './assets/landing_digital_twin.jpg';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -51,186 +52,127 @@ export default function LandingPage() {
       <Header />
 
       <main>
-        {/* HERO SECTION - GOOGLE ANTIGRAVITY STYLE */}
-        <section className="relative min-h-screen flex flex-col justify-center items-center pt-20 overflow-hidden bg-white">
+        {/* HERO SECTION */}
+        <section className="relative min-h-screen flex flex-col justify-center items-center pt-24 pb-20 overflow-hidden bg-slate-950">
 
-          {/* Particles Background Layer (The Drifting Dots/Dashes) */}
-          {init && (
-            <Particles
-              id="tsparticles"
-              className="absolute inset-0 z-0"
-              options={{
-                fullScreen: { enable: false },
-                fpsLimit: 120,
-                interactivity: {
-                  events: {
-                    onHover: {
-                      enable: true,
-                      mode: "repulse", // التنافر عند اقتراب الماوس
-                    },
-                    resize: { enable: true },
-                  },
-                  modes: {
-                    repulse: {
-                      distance: 120,
-                      duration: 0.4,
-                      speed: 1,
-                    },
-                  },
-                },
-                particles: {
-                  color: {
-                    // مصفوفة الألوان من الصور اللي بعتها (أزرق، لبني، بنفسجي)
-                    value: ["#2563eb", "#60a5fa", "#a855f7", "#3b82f6"],
-                  },
-                  move: {
-                    direction: "none",
-                    enable: true,
-                    outModes: {
-                      default: "out",
-                    },
-                    random: true,
-                    speed: 0.5, // حركة هادئة تشبه انعدام الجاذبية
-                    straight: false,
-                  },
-                  number: {
-                    density: {
-                      enable: true,
-                      area: 800,
-                    },
-                    value: 170, // كثافة مشابهة للصورة
-                  },
-                  opacity: {
-                    value: { min: 0.3, max: 0.7 },
-                  },
-                  shape: {
-                    type: "char", // استخدام الرموز لعمل شكل "الشرطة"
-                    options: {
-                      char: {
-                        value: ["—", "-"],
-                        font: "Verdana",
-                        weight: "800"
-                      }
-                    }
-                  },
-                  size: {
-                    value: { min: 2, max: 5 },
-                  },
-                  rotate: {
-                    value: { min: 0, max: 360 },
-                    direction: "random",
-                    animation: {
-                      enable: true,
-                      speed: 5
-                    }
-                  },
-                  links: {
-                    enable: false, // بدون خطوط متصلة تماماً
-                  },
-                },
-                detectRetina: true,
-              }}
-            />
-          )}
+          {/* Background Image Layer with 70% Opacity */}
+          <div
+            className="absolute inset-0 z-0 opacity-70 pointer-events-none"
+            style={{
+              backgroundImage: `url(${heroBg})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
+          />
 
-          {/* Floating Contextual Cards (Glassmorphism) */}
-          <div className="absolute top-1/4 left-[12%] hidden lg:block animate-[bounce_6s_infinite] z-10">
-            <div className="bg-white/40 backdrop-blur-md p-4 rounded-2xl border border-white shadow-xl flex items-center gap-3 w-48 transition-transform duration-500 hover:scale-105">
-              <div className="bg-red-500/10 p-2 rounded-lg text-red-500"><Activity size={20} className="animate-pulse" /></div>
-              <div>
-                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Vitals</div>
-                <div className="text-sm font-black text-zinc-900">72 BPM</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="absolute bottom-1/4 right-[12%] hidden lg:block animate-[bounce_8s_infinite_reverse] z-10">
-            <div className="bg-white/40 backdrop-blur-md p-4 rounded-2xl border border-white shadow-xl flex items-center gap-3 w-52 transition-transform duration-500 hover:scale-105">
-              <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500"><Calendar size={20} /></div>
-              <div>
-                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Next Appointment</div>
-                <div className="text-sm font-black text-zinc-900">Dr. Ahmed</div>
-              </div>
-            </div>
-          </div>
+          {/* Overlay to ensure text readability if needed */}
+          <div className="absolute inset-0 bg-slate-900/10 z-10 pointer-events-none" />
 
           {/* Main Hero Content */}
-          <div className="relative z-20 text-center px-4 max-w-5xl mx-auto">
-            <h1 className="text-[7rem] md:text-[10rem] font-black tracking-tighter text-black leading-[0.8] mb-4 reveal-on-scroll">
-              NEURA
+          <div className="relative z-20 text-center px-4 max-w-5xl mx-auto flex flex-col items-center">
+
+            <h1 className="text-[3.5rem] md:text-[5rem] lg:text-[5.5rem] font-bold tracking-tight leading-[1.1] mb-6 reveal-on-scroll">
+              <span className="text-white">Smarter Healthcare</span><br />
+              <span className="text-white">Starts </span>
+              <span className="text-blue-300">With You</span>
             </h1>
 
-            <h2 className="text-xl md:text-2xl font-bold tracking-[0.2em] uppercase text-blue-600 mb-8 reveal-on-scroll" style={{ transitionDelay: '200ms' }}>
-              The Intelligent Ecosystem
-            </h2>
-
-            <p className="text-zinc-500 text-lg md:text-xl max-w-xl mx-auto mb-12 leading-relaxed font-medium reveal-on-scroll" style={{ transitionDelay: '400ms' }}>
-              Redefining medical connectivity through real-time digital twins and professional AI documentation.
+            <p className="text-white/95 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-medium reveal-on-scroll" style={{ transitionDelay: '200ms' }}>
+              A new way to monitor, understand, and improve your health through real-time data, smart insights, and seamless doctor booking.
             </p>
 
-            <div className="flex flex-col md:flex-row gap-6 justify-center pt-4 reveal-on-scroll" style={{ transitionDelay: '600ms' }}>
-              <button onClick={() => navigate('/auth/register')} className="px-10 py-5 rounded-full bg-blue-600 text-white font-bold text-lg hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/20 hover:-translate-y-1 flex items-center gap-3">
-                Join the Network <ArrowRight size={20} />
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center reveal-on-scroll w-full sm:w-auto" style={{ transitionDelay: '400ms' }}>
+              <button
+                onClick={() => navigate('/auth/register')}
+                className="px-8 py-3.5 rounded-xl bg-blue-600/90 hover:bg-blue-600 text-white font-bold text-base transition-all shadow-lg shadow-blue-900/20 hover:-translate-y-0.5 w-full sm:w-auto"
+              >
+                Book an Appointment
               </button>
-              <button className="px-10 py-5 rounded-full bg-white border border-zinc-200 text-zinc-900 font-bold text-lg hover:bg-zinc-50 transition-all hover:-translate-y-1">
-                View Architecture
+              <button
+                className="px-8 py-3.5 rounded-xl bg-transparent text-white font-bold text-base hover:bg-white/10 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                Create your Digital Twin <span className="text-xl leading-none">»</span>
               </button>
             </div>
           </div>
         </section>
 
-        {/* SECTION 1: USER ROLES */}
-        <section className="py-24 bg-zinc-50 relative">
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent" />
+        {/* SECTION 1: OUR SERVICES */}
+        <section className="py-24 bg-[#f8fafc] relative">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-16 reveal-on-scroll">
-              <span className="text-blue-600 font-bold tracking-widest text-sm uppercase">Unified Platform</span>
-              <h3 className="text-4xl md:text-5xl font-bold mt-2 text-zinc-900">Built for Every Member of Care</h3>
+            <div className="mb-12 reveal-on-scroll">
+              <span className="text-blue-600 font-bold text-base block mb-3">Our Services</span>
+              <h3 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">Your Healthcare, All in One Place</h3>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
               {[
-                { name: "Patient", icon: Icons.Patient, desc: "Personal records & predictive insights" },
-                { name: "Doctor", icon: Icons.Doctor, desc: "AI Summaries & smart dashboards" },
-                { name: "Pharmacy", icon: Icons.Pharmacy, desc: "Instant e-prescriptions" },
-                { name: "Nurse", icon: Icons.NurseIcon, desc: "Real-time vitals monitoring" }
-              ].map((role, i) => (
-                <div key={i} className="group flex flex-col items-center text-center p-8 rounded-3xl bg-white border border-zinc-100 transition-all duration-500 hover:border-blue-500/30 hover:shadow-[0_20px_40px_-15px_rgba(37,99,235,0.15)] hover:-translate-y-2 reveal-on-scroll" style={{ transitionDelay: `${i * 100}ms` }}>
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-blue-600 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-500 shadow-sm">
-                    <role.icon size={28} />
+                {
+                  name: "Medical records",
+                  icon: Mic,
+                  desc: "AI summarizes and record sessions,history, and helps doctors with smart suggestions."
+                },
+                {
+                  name: "Pharmacy",
+                  icon: Pill,
+                  desc: "Fast access to prescribed medicines with expert support."
+                },
+                {
+                  name: "Nursing Care",
+                  icon: UserCheck,
+                  desc: "Professional nursing care at your home with trusted specialists."
+                },
+                {
+                  name: "Therapy Groups",
+                  icon: Users,
+                  desc: "Connect, heal, and grow with guided group therapy programs."
+                }
+              ].map((service, i) => (
+                <div key={i} className="group flex flex-col p-8 rounded-[2rem] bg-white shadow-sm border border-slate-100/50 hover:shadow-md transition-shadow duration-300 reveal-on-scroll" style={{ transitionDelay: `${i * 100}ms` }}>
+                  <div className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-blue-600 mb-6">
+                    <service.icon size={28} strokeWidth={1.5} />
                   </div>
-                  <h4 className="font-semibold text-xl text-zinc-900 mb-2">{role.name}</h4>
-                  <p className="text-sm text-zinc-500 leading-relaxed font-medium">{role.desc}</p>
+                  <h4 className="font-bold text-xl text-zinc-900 mb-3">{service.name}</h4>
+                  <p className="text-sm text-zinc-500 leading-relaxed">{service.desc}</p>
                 </div>
               ))}
             </div>
+
+            <div className="flex justify-center reveal-on-scroll" style={{ transitionDelay: '400ms' }}>
+              <button className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2">
+                Explore more <ArrowRight size={16} />
+              </button>
+            </div>
           </div>
         </section>
 
-        {/* SECTION 2: DIGITAL TWIN */}
-        <section className="py-32 px-6 relative bg-white">
-          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-            <div className="order-2 lg:order-1 reveal-on-scroll">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-sm font-bold mb-8 uppercase tracking-wider">
-                <Icons.Twin size={16} />
-                <span>Core Technology</span>
+        {/* SECTION 2: STATS */}
+        <section className="py-28 px-6 bg-white">
+          <div className="max-w-4xl mx-auto">
+            {/* Header Text */}
+            <h2 className="text-xl sm:text-2xl text-center text-zinc-900 font-medium leading-relaxed mb-20 px-4 reveal-on-scroll">
+              Our platform continues to grow, serving thousands of patients<br className="hidden md:block" /> with trusted and advanced healthcare services every day.
+            </h2>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+              {/* Stat 1 */}
+              <div className="flex flex-col items-center justify-center pt-8 border-t border-gray-100 reveal-on-scroll" style={{ transitionDelay: '100ms' }}>
+                <div className="text-4xl md:text-5xl font-bold text-zinc-900 mb-3 tracking-tight">15k+</div>
+                <div className="text-gray-500 font-medium text-sm md:text-base">Patient Records</div>
               </div>
-              <h2 className="text-5xl md:text-7xl font-bold text-zinc-900 mb-8 tracking-tight">
-                Your Living <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-blue-600 font-black">Digital Replica.</span>
-              </h2>
-              <p className="text-xl text-zinc-600 font-light mb-10 leading-relaxed max-w-lg">
-                Updates in real-time with every visit, lab result, and prescription. Visualize risks, track trends, and predict outcomes before they happen.
-              </p>
 
-              <button className="px-8 py-4 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20 font-semibold hover:-translate-y-1">
-                Explore The Architecture
-              </button>
-            </div>
+              {/* Stat 2 */}
+              <div className="flex flex-col items-center justify-center pt-8 border-t border-gray-100 reveal-on-scroll" style={{ transitionDelay: '200ms' }}>
+                <div className="text-4xl md:text-5xl font-bold text-zinc-900 mb-3 tracking-tight">200+</div>
+                <div className="text-gray-500 font-medium text-sm md:text-base">Smart Diagnoses</div>
+              </div>
 
-            <div className="order-1 lg:order-2 reveal-on-scroll">
-              <div className="relative rounded-[2.5rem] bg-zinc-50 border border-zinc-100 p-4 shadow-2xl hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-shadow duration-700">
-                <DigitalTwinVisual />
+              {/* Stat 3 */}
+              <div className="flex flex-col items-center justify-center pt-8 border-t border-gray-100 reveal-on-scroll" style={{ transitionDelay: '300ms' }}>
+                <div className="text-4xl md:text-5xl font-bold text-zinc-900 mb-3 tracking-tight">99+</div>
+                <div className="text-gray-500 font-medium text-sm md:text-base">Data Accuracy</div>
               </div>
             </div>
           </div>
@@ -278,17 +220,17 @@ export default function LandingPage() {
             <div className="order-2 lg:order-1 reveal-on-scroll">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-sm font-bold uppercase tracking-wider mb-8">
                 <Icons.Group size={16} />
-                <span>Encrypted Flow</span>
+                <span>Online Therapy</span>
               </div>
               <h2 className="text-5xl md:text-7xl font-bold text-zinc-900 mb-8 tracking-tight">
-                Instantly <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500 font-black">Synchronized.</span>
+                Connect & <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500 font-black">Heal Together.</span>
               </h2>
               <p className="text-xl text-zinc-600 font-light mb-10 leading-relaxed max-w-lg">
-                Whenever a physician updates a diagnosis, nurses and the pharmacy receive immediate secure alerts. Complete continuity of care.
+                Join secure online therapy sessions with other patients, expertly guided and controlled by specialized doctors. A safe, supportive space to share, listen, and recover together.
               </p>
               <button className="px-8 py-4 rounded-full bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/30 hover:-translate-y-1">
-                Explore Routing
+                Join a Session
               </button>
             </div>
 
@@ -300,53 +242,194 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* SECTION 5: DIGITAL TWIN DETAILS */}
+        <section className="py-24 px-6 bg-[#f8fafc] relative overflow-hidden">
+          <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
+
+            {/* Left Column: Text & Features */}
+            <div className="lg:w-1/2 order-2 lg:order-1 reveal-on-scroll">
+              <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-xl bg-blue-100/50 text-blue-600 text-sm font-semibold mb-6 shadow-sm border border-blue-100">
+                Core Technology
+              </div>
+
+              <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-5 tracking-tight">
+                Your Personal <span className="text-blue-700">Digital Twin</span>
+              </h2>
+
+              <p className="text-lg text-slate-500 mb-10 leading-relaxed max-w-lg">
+                Experience a virtual version of your health. Track your progress, understand your symptoms, and receive personalized care recommendations.
+              </p>
+
+              <div className="space-y-8 mb-10">
+                {/* Feature 1 */}
+                <div className="flex items-start gap-5">
+                  <div className="w-12 h-12 shrink-0 rounded-full bg-[#f0f5fa] flex items-center justify-center text-slate-700 shadow-sm border border-slate-100">
+                    <HelpCircle size={22} strokeWidth={1.5} className="text-blue-900" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900 mb-1">What-If Simulations</h4>
+                    <p className="text-slate-500 text-sm">Visualize health outcomes from lifestyle changes</p>
+                  </div>
+                </div>
+
+                {/* Feature 2 */}
+                <div className="flex items-start gap-5">
+                  <div className="w-12 h-12 shrink-0 rounded-full bg-[#f0f5fa] flex items-center justify-center text-slate-700 shadow-sm border border-slate-100">
+                    <AlertCircle size={22} strokeWidth={1.5} className="text-blue-900" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900 mb-1">Contraindication Detection</h4>
+                    <p className="text-slate-500 text-sm">Instant allergy and side effects warnings</p>
+                  </div>
+                </div>
+
+                {/* Feature 3 */}
+                <div className="flex items-start gap-5">
+                  <div className="w-12 h-12 shrink-0 rounded-full bg-[#f0f5fa] flex items-center justify-center text-slate-700 shadow-sm border border-slate-100">
+                    <RefreshCw size={22} strokeWidth={1.5} className="text-blue-900" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900 mb-1">Real-Time Updates</h4>
+                    <p className="text-slate-500 text-sm">Sync with smart devices and medical records</p>
+                  </div>
+                </div>
+              </div>
+
+              <button className="px-6 py-3.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2 group">
+                Create Your Digital Twin <ChevronsRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+
+            {/* Right Column: Image */}
+            <div className="lg:w-1/2 order-1 lg:order-2 reveal-on-scroll relative">
+              {/* Decorative background blocks behind the image */}
+              <div className="absolute top-0 left-0 w-3/4 h-3/4 bg-[#99b4d6] rounded-[2rem] -translate-x-6 -translate-y-6 z-0 mix-blend-multiply opacity-50 hidden md:block"></div>
+              <div className="absolute bottom-0 right-0 w-4/5 h-4/5 bg-[#e8f0fe] rounded-[2.5rem] translate-x-10 translate-y-10 z-0 hidden md:block"></div>
+
+              {/* The Image */}
+              <div className="relative z-10 p-2">
+                <img
+                  src={digitalTwinImg}
+                  alt="Personal Digital Twin Example"
+                  className="w-full h-auto rounded-[1.5rem] shadow-2xl ring-1 ring-slate-900/5 object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         <DoctorsSection />
         <FeaturesSection />
 
-        {/* CALL TO ACTION */}
-        <section className="py-32 relative bg-white overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500/5 via-transparent to-transparent" />
-          <div className="max-w-5xl mx-auto px-6 text-center relative z-10 reveal-on-scroll">
-            <h2 className="text-[5rem] md:text-[8rem] font-black tracking-tighter mb-8 text-zinc-900 leading-[0.85]">
-              NEURA
-            </h2>
-            <p className="text-xl text-zinc-600 max-w-xl mx-auto mb-12 font-medium">
-              The future of healthcare is connected, intelligent, and human-centric. Built exclusively for excellence.
-            </p>
-            <button onClick={() => navigate('/auth/register')} className="group px-12 py-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl transition-all duration-300 shadow-[0_20px_40px_-15px_rgba(37,99,235,0.5)] hover:-translate-y-2 flex items-center justify-center gap-3 mx-auto">
-              Get Started Free <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
-            </button>
-          </div>
-        </section>
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-zinc-200 bg-zinc-50 pt-24 pb-12 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-end gap-12">
-          <div>
-            <span className="text-4xl font-black tracking-tight text-zinc-900 block mb-6">NEURA.</span>
-            <p className="text-zinc-500 text-sm max-w-xs leading-relaxed font-medium">
-              Enterprise medical infrastructure designed for privacy, speed, and elegance. Transform the way your clinic operates today.
-            </p>
-          </div>
-
-          <div className="flex gap-16 text-sm text-zinc-600">
-            <div className="flex flex-col gap-5">
-              <span className="text-zinc-900 font-bold uppercase tracking-wider text-xs">Platform</span>
-              <a href="#" className="hover:text-blue-600 transition-colors font-medium">Digital Twin</a>
-              <a href="#" className="hover:text-blue-600 transition-colors font-medium">AI Scribe</a>
-              <a href="#" className="hover:text-blue-600 transition-colors font-medium">Security</a>
-            </div>
-            <div className="flex flex-col gap-5">
-              <span className="text-zinc-900 font-bold uppercase tracking-wider text-xs">Legal</span>
-              <a href="#" className="hover:text-blue-600 transition-colors font-medium">HIPAA Privacy</a>
-              <a href="#" className="hover:text-blue-600 transition-colors font-medium">Terms of Service</a>
+      <footer className="w-full">
+        {/* Top Subscribe Section */}
+        <div className="bg-[#2563eb] py-16 px-6">
+          <div className="max-w-[70rem] mx-auto flex flex-col md:flex-row justify-between items-center gap-8 reveal-on-scroll">
+            <h3 className="text-white text-2xl md:text-[1.75rem] font-medium tracking-wide max-w-[42rem] md:leading-[1.4]">
+              Subscribe to receive important updates, new services, and medical tips straight to your email.
+            </h3>
+            <div className="w-full max-w-md bg-white rounded-xl p-2.5 flex items-center shadow-lg">
+              <input
+                type="email"
+                placeholder="Your email address"
+                className="flex-1 bg-transparent px-4 border-none outline-none text-slate-700 placeholder-slate-400 text-sm"
+              />
+              <button className="bg-[#1e3a8a] hover:bg-[#172b66] text-white px-8 py-3.5 rounded-[10px] font-semibold text-sm transition-colors shadow-sm">
+                Subscribe
+              </button>
             </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto mt-24 pt-8 border-t border-zinc-200 flex flex-col md:flex-row justify-between items-center text-xs text-zinc-500 font-semibold tracking-wide">
-          <p>&copy; {new Date().getFullYear()} NEURA Health Systems. All rights reserved.</p>
-          <p>Engineered for excellence.</p>
+
+        {/* Main Footer Section */}
+        <div className="bg-[#0f172a] pt-24 pb-12 px-6">
+          <div className="max-w-[70rem] mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20 reveal-on-scroll">
+
+              {/* Column 1: Brand & Contact */}
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold tracking-tight text-white mb-8">Neura</span>
+                <p className="text-slate-300 text-sm leading-relaxed mb-8 pr-4 font-medium">
+                  A smart healthcare platform connecting patients with trusted medical services.
+                </p>
+                <div className="flex flex-col gap-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-[1.125rem] h-[1.125rem] rounded-full bg-white flex items-center justify-center text-[#0f172a]">
+                      <Mail size={10} strokeWidth={3} />
+                    </div>
+                    <span className="text-slate-300 text-sm font-medium">info@medicare.com</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-[1.125rem] h-[1.125rem] rounded-full bg-white flex items-center justify-center text-[#0f172a]">
+                      <Phone size={10} strokeWidth={3} />
+                    </div>
+                    <span className="text-slate-300 text-sm font-medium">+20 100 000 0000</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: Quick Links */}
+              <div className="flex flex-col lg:pl-4">
+                <h4 className="text-white font-semibold mb-8 tracking-wide text-[15px]">Quick Links</h4>
+                <div className="flex flex-col gap-5 text-sm font-medium">
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Home</a>
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Services</a>
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Digital Twin</a>
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Our Doctors</a>
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Contact Us</a>
+                </div>
+              </div>
+
+              {/* Column 3: Our Services */}
+              <div className="flex flex-col">
+                <h4 className="text-white font-semibold mb-8 tracking-wide text-[15px]">Our Services</h4>
+                <div className="flex flex-col gap-5 text-sm font-medium">
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Pharmacy</a>
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Therapy Groups</a>
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Nursing Care</a>
+                  <a href="#" className="text-slate-300 hover:text-white transition-colors">Medical Booking</a>
+                </div>
+              </div>
+
+              {/* Column 4: Appointment */}
+              <div className="flex flex-col">
+                <h4 className="text-white font-semibold mb-8 tracking-wide text-[15px]">Book An Appointment</h4>
+                <p className="text-slate-300 text-sm leading-relaxed mb-6 font-medium pr-2">
+                  The doctorate staff members are well trained professionals.
+                </p>
+                <button className="flex items-center justify-center lg:justify-start gap-3 bg-transparent border border-[#334155] rounded-xl px-4 py-3 text-slate-300 hover:bg-slate-800 hover:border-slate-500 hover:text-white transition-all w-max md:w-full lg:w-max group">
+                  <Phone size={16} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-semibold tracking-wide">Call:+012 345 6789</span>
+                </button>
+              </div>
+
+            </div>
+
+            {/* Bottom Bar */}
+            <div className="border-t border-[#1e293b] pt-8 pb-4 flex flex-col md:flex-row justify-between items-center gap-6 reveal-on-scroll">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-semibold text-slate-300/80">
+                <span>All Rights Reserved © Medicare 2025</span>
+                <span className="hidden sm:inline text-slate-600">|</span>
+                <a href="#" className="hover:text-white transition-colors">Terms & Conditions</a>
+                <span className="hidden sm:inline text-slate-600">|</span>
+                <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              </div>
+              <div className="flex items-center gap-4">
+                <a href="#" className="w-8 h-8 rounded-full border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:border-white hover:bg-slate-800 transition-all">
+                  <Facebook size={14} />
+                </a>
+                <a href="#" className="w-8 h-8 rounded-full border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:border-white hover:bg-slate-800 transition-all">
+                  <Twitter size={14} />
+                </a>
+                <a href="#" className="w-8 h-8 rounded-full border border-slate-600 flex items-center justify-center text-slate-400 hover:text-white hover:border-white hover:bg-slate-800 transition-all">
+                  <Instagram size={14} />
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

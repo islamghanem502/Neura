@@ -1,15 +1,19 @@
 // src/features/doctor/components/DoctorSidebar.jsx
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     Home, FileText, Mail, Calendar,
     Folder, Settings, LogOut, AlertTriangle, Building2, Activity
 } from 'lucide-react';
 import { useLogout } from '../../../hooks/useAuth';
+import { useDoctorData } from '../../../hooks/useDoctorData';
 
 const DoctorSidebar = ({ isLocked = false }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
     const { logout } = useLogout();
+    const { data: doctorRes } = useDoctorData();
+
+    // Fallbacks just in case data isn't loaded yet
+    const doctorData = doctorRes?.data?.basicInfo || { firstName: 'Dr.', lastName: 'Richardson' };
+    const professionalInfo = doctorRes?.data?.professionalInfo || { primarySpecialization: 'Chief of Surgery' };
 
     const menuItems = [
         { name: 'Dashboard', icon: <Home size={20} />, path: '/dashboard/doctor', end: true },
@@ -22,201 +26,95 @@ const DoctorSidebar = ({ isLocked = false }) => {
     ];
 
     return (
-        <aside
-            onMouseEnter={() => setIsExpanded(true)}
-            onMouseLeave={() => setIsExpanded(false)}
-            style={{
-                width: isExpanded ? '240px' : '80px',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                background: 'linear-gradient(135deg, #0f172a 0%, #0a0f1c 100%)',
-                borderRadius: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '24px 16px',
-                gap: '8px',
-                flexShrink: 0,
-                zIndex: 50,
-                overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                borderRight: '1px solid rgba(59, 130, 246, 0.1)',
-            }}
-        >
+        <aside className="w-[260px] bg-white flex flex-col h-full py-8 px-5 shrink-0 z-50 overflow-hidden border-r border-slate-100">
             {/* Logo */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '4px 8px 24px 8px',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                marginBottom: '8px',
-            }}>
-                <div style={{
-                    width: '40px', height: '40px', flexShrink: 0,
-                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                    borderRadius: '14px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M22 12H18L15 21L9 3L6 12H2" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+            <div className="flex items-center gap-2 mb-10 px-2">
+                <span className="font-black text-[22px] tracking-tight text-slate-800 uppercase">NEURA</span>
+            </div>
+
+            {/* User Profile */}
+            <div className="flex items-center gap-3 mb-10 px-2">
+                <img
+                    src={doctorData.profileImage || `https://ui-avatars.com/api/?name=${doctorData.firstName || 'Dr'}+${doctorData.lastName || 'Richardson'}&background=e2e8f0&color=475569`}
+                    alt="Profile"
+                    className="w-[42px] h-[42px] rounded-full object-cover border border-slate-200"
+                />
+                <div className="flex flex-col">
+                    <h3 className="text-[14px] font-bold text-slate-900 leading-snug">
+                        {doctorData.firstName} {doctorData.lastName}
+                    </h3>
+                    <p className="text-[12px] font-medium text-slate-500 mt-0.5">
+                        {professionalInfo.primarySpecialization}
+                    </p>
                 </div>
-                {isExpanded && (
-                    <span style={{
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '18px',
-                        letterSpacing: '-0.02em',
-                        background: 'linear-gradient(135deg, #fff, #94a3b8)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                    }}>
-                        Neura
-                    </span>
-                )}
             </div>
 
             {/* Restricted banner */}
             {isLocked && (
-                <div style={{
-                    background: 'rgba(239, 68, 68, 0.08)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '16px',
-                    padding: isExpanded ? '12px' : '10px',
-                    marginBottom: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    overflow: 'hidden',
-                    whiteSpace: 'nowrap',
-                    justifyContent: isExpanded ? 'flex-start' : 'center',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                }}>
-                    <AlertTriangle size={16} color="#f87171" style={{ flexShrink: 0 }} />
-                    {isExpanded && (
-                        <div>
-                            <p style={{ color: '#f87171', fontSize: '11px', fontWeight: 600, margin: 0, lineHeight: '1.4' }}>Profile Pending</p>
-                            <p style={{ color: 'rgba(248, 113, 113, 0.7)', fontSize: '9px', margin: 0 }}>Complete your profile</p>
-                        </div>
-                    )}
+                <div className="bg-red-50 border border-red-100 rounded-2xl p-3 mb-6 flex items-start gap-3 relative mx-2">
+                    <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-red-700 text-[13px] font-bold leading-tight">Profile Pending</p>
+                        <p className="text-red-600/80 text-[11px] mt-0.5">Please complete your profile</p>
+                    </div>
                 </div>
             )}
 
             {/* Nav items */}
-            <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden' }}>
+            <nav className="flex-1 flex flex-col gap-1.5">
                 {menuItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
                         end={item.end}
                         onClick={(e) => isLocked && e.preventDefault()}
-                        className="sidebar-link"
-                        style={({ isActive }) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '10px 12px',
-                            borderRadius: '14px',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textDecoration: 'none',
-                            transition: 'all 0.2s ease',
-                            background: isActive ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05))' : 'transparent',
-                            color: isActive ? '#60a5fa' : '#94a3b8',
-                            fontWeight: isActive ? 500 : 400,
-                            fontSize: '14px',
-                            opacity: isLocked ? 0.5 : 1,
-                            cursor: isLocked ? 'not-allowed' : 'pointer',
-                            justifyContent: isExpanded ? 'flex-start' : 'center',
-                            borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent',
-                        })}
+                        className={({ isActive }) => `
+                            flex items-center gap-3.5 px-3 py-[12px] rounded-[1.2rem] font-semibold text-[14px] transition-all
+                            ${isActive 
+                                ? 'bg-[#f0f5ff] text-blue-600 shadow-sm border border-blue-100/30' 
+                                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}
+                            ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}
+                        `}
                     >
                         {({ isActive }) => (
                             <>
-                                <span style={{
-                                    flexShrink: 0,
-                                    color: isActive ? '#3b82f6' : 'inherit',
-                                    display: 'flex',
-                                    transition: 'color 0.2s ease',
-                                }}>
+                                <span className={`${isActive ? 'text-blue-600' : 'text-slate-400'}`}>
                                     {item.icon}
                                 </span>
-                                {isExpanded && <span>{item.name}</span>}
+                                {item.name}
                             </>
                         )}
                     </NavLink>
                 ))}
             </nav>
 
-            {/* Divider */}
-            <div style={{
-                height: '1px',
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
-                margin: '12px 0'
-            }} />
+            {/* Settings & Logout (pushed to bottom) */}
+            <div className="flex flex-col gap-1 mt-8">
+                <NavLink
+                    to="/dashboard/doctor/profile"
+                    className={({ isActive }) => `
+                        flex items-center gap-3.5 px-3 py-[12px] rounded-[1.2rem] font-semibold text-[14px] transition-all
+                        ${isActive 
+                            ? 'bg-[#f0f5ff] text-blue-600 shadow-sm border border-blue-100/30' 
+                            : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}
+                    `}
+                >
+                    {({ isActive }) => (
+                        <>
+                            <Settings size={20} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
+                            Settings
+                        </>
+                    )}
+                </NavLink>
 
-            {/* Settings */}
-            <NavLink
-                to="/dashboard/doctor/profile"
-                className="sidebar-link"
-                style={({ isActive }) => ({
-                    display: 'flex', alignItems: 'center', gap: '12px',
-                    padding: '10px 12px', borderRadius: '14px',
-                    textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden',
-                    transition: 'all 0.2s ease',
-                    background: isActive ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05))' : 'transparent',
-                    color: isActive ? '#60a5fa' : '#94a3b8',
-                    fontSize: '14px', fontWeight: 400,
-                    justifyContent: isExpanded ? 'flex-start' : 'center',
-                    borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent',
-                })}
-            >
-                <Settings
-                    size={20}
-                    style={{
-                        flexShrink: 0,
-                        display: 'flex',
-                        transition: 'all 0.3s ease',
-                        ...(isLocked ? { color: '#60a5fa', animation: 'spin 4s linear infinite' } : {}),
-                    }}
-                />
-                {isExpanded && <span style={isLocked ? { color: '#60a5fa' } : {}}>Settings</span>}
-            </NavLink>
-
-            {/* Logout */}
-            <button
-                onClick={logout}
-                className="sidebar-logout"
-                style={{
-                    display: 'flex', alignItems: 'center', gap: '12px',
-                    padding: '10px 12px', borderRadius: '14px', border: 'none',
-                    background: 'transparent', cursor: 'pointer',
-                    color: '#f87171', fontSize: '14px', fontWeight: 400,
-                    transition: 'all 0.2s ease', whiteSpace: 'nowrap',
-                    overflow: 'hidden', width: '100%',
-                    justifyContent: isExpanded ? 'flex-start' : 'center',
-                }}
-            >
-                <LogOut size={20} style={{ flexShrink: 0, display: 'flex' }} />
-                {isExpanded && <span>Logout</span>}
-            </button>
-
-            <style>{`
-                .sidebar-link:hover { 
-                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)) !important;
-                    transform: translateX(2px);
-                }
-                .sidebar-logout:hover { 
-                    background: rgba(239, 68, 68, 0.1) !important;
-                    transform: translateX(2px);
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to   { transform: rotate(360deg); }
-                }
-            `}</style>
+                <button
+                    onClick={logout}
+                    className="flex items-center gap-3.5 px-3 py-[12px] rounded-[1.2rem] font-semibold text-[14px] text-red-600 hover:bg-red-50 transition-all text-left w-full"
+                >
+                    <LogOut size={20} className="text-red-500" />
+                    Sign out
+                </button>
+            </div>
         </aside>
     );
 };

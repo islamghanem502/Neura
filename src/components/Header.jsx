@@ -47,20 +47,19 @@ export const Header = () => {
                 <Activity className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-lg font-bold text-slate-900 leading-none">NEURA</span>
-                <span className="text-[9px] font-bold text-blue-600 tracking-tighter uppercase">Medical Center</span>
+                <span className={`text-lg font-bold leading-none transition-colors duration-300 ${scrolled ? 'text-slate-900' : 'text-white'}`}>NEURA</span>
               </div>
             </div>
 
-            {/* Desktop Nav - Simple CSS Hover */}
-            <div className="hidden lg:flex items-center gap-1 bg-gray-100/50 p-1 rounded-full border border-gray-200/50">
+            {/* Desktop Nav - Glassmorphism */}
+            <div className={`hidden lg:flex items-center gap-2 p-1.5 rounded-full border transition-colors duration-300 backdrop-blur-md ${scrolled ? 'bg-gray-100/50 border-gray-200/50' : 'bg-white/10 border-white/20'}`}>
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
                   to={link.path}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${location.pathname === link.path
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-blue-500'
+                  className={`px-5 py-1.5 text-xs font-semibold rounded-full transition-all duration-300 ${location.pathname === link.path
+                      ? (scrolled ? 'bg-white text-blue-600 shadow-sm' : 'bg-white/20 text-white shadow-sm')
+                      : (scrolled ? 'text-slate-600 hover:text-blue-500' : 'text-white/80 hover:text-white')
                     }`}
                 >
                   {link.name}
@@ -70,14 +69,17 @@ export const Header = () => {
 
             {/* Desktop CTA */}
             <div className="hidden lg:flex items-center gap-3">
-              <Link to="/auth/login" className="text-xs font-bold text-slate-600 hover:text-blue-600">
-                Sign In
+              <Link 
+                to="/contact" 
+                className={`px-5 py-2 text-xs font-semibold rounded-full border transition-all duration-300 ${scrolled ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-white/30 text-white hover:bg-white/10'}`}
+              >
+                Contact Us
               </Link>
               <Link
                 to="/auth/register"
-                className="px-5 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-blue-600 transition-all flex items-center gap-2"
+                className={`px-5 py-2 text-xs font-semibold rounded-full border transition-all duration-300 flex items-center gap-2 ${scrolled ? 'border-transparent bg-slate-900 text-white hover:bg-blue-600' : 'border-white/30 bg-white/10 text-white hover:bg-white/20 backdrop-blur-md'}`}
               >
-                Get Started <ArrowRight size={14} />
+                Sign Up <ArrowRight size={14} />
               </Link>
             </div>
 

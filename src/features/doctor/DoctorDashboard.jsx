@@ -76,12 +76,12 @@ export default function DoctorDashboard() {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                  <span className="text-xs font-bold text-blue-600 uppercase">Action Required</span>
-                  <div className="w-32 h-2 bg-blue-200 rounded-full mt-1">
-                      <div className="bg-blue-600 h-full rounded-full transition-all duration-1000" style={{ width: '33.3%' }}></div>
-                  </div>
+                <span className="text-xs font-bold text-blue-600 uppercase">Action Required</span>
+                <div className="w-32 h-2 bg-blue-200 rounded-full mt-1">
+                  <div className="bg-blue-600 h-full rounded-full transition-all duration-1000" style={{ width: '33.3%' }}></div>
+                </div>
               </div>
-              <Link 
+              <Link
                 to="/dashboard/doctor/my-profile"
                 className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
               >

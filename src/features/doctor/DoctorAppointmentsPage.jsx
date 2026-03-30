@@ -473,7 +473,7 @@ export default function DoctorAppointmentsPage() {
       )}
 
       {/* History Modal */}
-      <PatientHistoryModal 
+      <PatientHistoryModal
         patientId={historyPatient?.id}
         patientName={historyPatient?.name}
         isOpen={!!historyPatient}
