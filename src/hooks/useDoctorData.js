@@ -17,6 +17,8 @@ import {
   addClinicInfo,
   updateClinicInfo,
   deleteClinicInfo,
+  uploadProfileImage,
+  deleteProfileImage,
 } from '../api/doctorService';
 
 export const useDoctorData = () => {
@@ -64,6 +66,34 @@ export const useUploadDoctorDocument = () => {
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Failed to upload document');
+    }
+  });
+};
+
+export const useUploadProfileImage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: uploadProfileImage,
+    onSuccess: () => {
+      toast.success('Profile image uploaded successfully');
+      queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to upload profile image');
+    }
+  });
+};
+
+export const useDeleteProfileImage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteProfileImage,
+    onSuccess: () => {
+      toast.success('Profile image deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to delete profile image');
     }
   });
 };

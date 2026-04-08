@@ -22,13 +22,8 @@ import TherapyGroupsPage from "../features/patient/therapy-groups/TherapyGroupsP
 import PatientProfilePage from "../features/patient/profile/PatientProfilePage";
 
 // ── Doctor Features ──────────────────────────────────────────────────────
-import DoctorLayout from "../features/doctor/components/DoctorLayout";
-import DoctorDashboard from "../features/doctor/DoctorDashboard";
-import CompleteProfilePage from "../features/doctor/CompleteProfilePage";
-import DoctorProfile from "../features/doctor/DoctorProfile";
-import MyClinic from "../features/doctor/MyClinic";
-import DoctorAppointmentsPage from "../features/doctor/DoctorAppointmentsPage";
-import StartSessionPage from "../features/doctor/StartSessionPage";
+import DoctorDashboard from "../features/doctor/dashboard/DoctorDashboard";
+import CompleteProfilePage from "../features/doctor/onboarding/CompleteProfilePage";
 
 // ── Other Features ───────────────────────────────────────────────────────
 import NurseDashboard from "../features/nurse/NurseDashboard";
@@ -78,15 +73,11 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/dashboard/doctor",
-        element: <DoctorLayout />, // الـ Layout الجديد اللي عملناه
-        children: [
-          { index: true, element: <DoctorDashboard /> },
-          { path: "profile", element: <CompleteProfilePage /> }, // used when verification incomplete
-          { path: "my-profile", element: <DoctorProfile /> }, // used when active
-          { path: "clinic", element: <MyClinic /> },
-          { path: "appointments", element: <DoctorAppointmentsPage /> },
-          { path: "start-session", element: <StartSessionPage /> },
-        ],
+        element: <DoctorDashboard />,
+      },
+      {
+        path: "/dashboard/doctor/profile",
+        element: <CompleteProfilePage />, 
       },
     ],
   },

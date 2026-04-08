@@ -9,6 +9,18 @@ export const getDoctorById = async (doctorId) => {
   return response.data;
 };
 
+// ── Profile Image ─────────────────────────────────────────────────────────────
+
+export const uploadProfileImage = async (formData) => {
+  const response = await axiosInstance.post('/profile/profile-image', formData);
+  return response.data;
+};
+
+export const deleteProfileImage = async () => {
+  const response = await axiosInstance.delete('/profile/profile-image');
+  return response.data;
+};
+
 /**
  * Fetch the logged-in doctor's basic info.
  * GET /doctors/me/basic-info

@@ -12,8 +12,8 @@ const DoctorSidebar = ({ isLocked = false }) => {
     const { data: doctorRes } = useDoctorData();
 
     // Fallbacks just in case data isn't loaded yet
-    const doctorData = doctorRes?.data?.basicInfo || { firstName: 'Dr.', lastName: 'Richardson' };
-    const professionalInfo = doctorRes?.data?.professionalInfo || { primarySpecialization: 'Chief of Surgery' };
+    const doctorData = doctorRes?.data?.basicInfo || doctorRes || { firstName: 'Dr.', lastName: 'Richardson' };
+    const professionalInfo = doctorData?.professionalInfo || { primarySpecialization: 'Chief of Surgery' };
 
     const menuItems = [
         { name: 'Dashboard', icon: <Home size={20} />, path: '/dashboard/doctor', end: true },
