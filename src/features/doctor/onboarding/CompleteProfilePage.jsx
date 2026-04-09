@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import {
-  User, ShieldCheck, MapPin, Calendar, CheckCircle, Search, Bell,
-  Loader2, Lock, BadgeCheck, Shield, Headphones, AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, ArrowRight, Info, LogOut
+  User, ShieldCheck, FileText, CheckCircle, Search, Bell,
+  Loader2, Lock, BadgeCheck, Shield, Headphones, AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, ArrowRight, LogOut
 } from 'lucide-react';
 import { useLogout } from '../../../hooks/useAuth';
 import {
@@ -15,7 +15,6 @@ import {
   useSubmitDoctorProfile,
   useUploadProfileImage,
   useDeleteProfileImage,
-  useAddClinicInfo,
   useAddDoctorCertificate,
   useAddDoctorMembership,
   useAddDoctorAward,
@@ -24,7 +23,7 @@ import {
 const SIDEBAR_STEPS = [
   { id: 1, title: 'Identity', icon: User },
   { id: 2, title: 'Credentials', icon: ShieldCheck },
-  { id: 3, title: 'Clinic Location', icon: MapPin },
+  { id: 3, title: 'Documents', icon: FileText },
   { id: 4, title: 'Verification', icon: CheckCircle },
 ];
 
@@ -43,28 +42,10 @@ export default function CompleteProfilePage() {
   const submitDoctorProfileMutation = useSubmitDoctorProfile();
   const uploadProfileImageMutation = useUploadProfileImage();
   const deleteProfileImageMutation = useDeleteProfileImage();
-  const clinicMutation = useAddClinicInfo();
 
   // Determine if basic info already exists (has been saved before)
   // We use the presence of firstName/phone populated from API as a signal
   const basicInfoExists = !!(doctorRes?.data?.basicInfo?.phone || doctorRes?.data?.basicInfo?.firstName);
-
-  const [clinicForm, setClinicForm] = useState({
-    clinicName: '',
-    address: {
-      governorate: '',
-      city: '',
-      street: '',
-    },
-    phone: '',
-    availableHours: [
-      { day: 'Friday', startTime: '15:00', endTime: '18:00' },
-      { day: 'Saturday', startTime: '20:00', endTime: '22:00' }
-    ],
-    consultationDuration: 15,
-    consultationFee: 500,
-    followUpFee: 200
-  });
 
   const doctorData = doctorRes?.data?.basicInfo || doctorRes || {};
 
@@ -91,7 +72,7 @@ export default function CompleteProfilePage() {
   });
 
   const [docMeta, setDocMeta] = useState({
-    medicalLicense: { licenseNumber: '', registrationNumber: '', issueDate: '', expiryDate: '' },
+    medicalLicense: { licenseNumber: '', issueDate: '', expiryDate: '' },
     medicalDegree: { university: '', graduationYear: '', degree: '' },
     syndicateCard: { syndicateNumber: '', issueDate: '' }
   });
@@ -246,6 +227,18 @@ export default function CompleteProfilePage() {
       formData.append('syndicateNumber', meta.syndicateNumber);
       formData.append('issueDate', meta.issueDate);
     }
+    else if (documentType === 'nationalIdFront') {
+      formData.append('side', 'front');
+      uploadDocMutation.mutate({ documentType: 'national-id', formData });
+      e.target.value = null;
+      return;
+    }
+    else if (documentType === 'nationalIdBack') {
+      formData.append('side', 'back');
+      uploadDocMutation.mutate({ documentType: 'national-id', formData });
+      e.target.value = null;
+      return;
+    }
 
     const kebabCaseType = documentType.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
     uploadDocMutation.mutate({ documentType: kebabCaseType, formData });
@@ -295,10 +288,6 @@ export default function CompleteProfilePage() {
   };
 
   const reqDocs = doctorData.requiredDocuments || {};
-  const credentialsChecklist = [
-    { key: 'medicalDegree', label: 'Medical Degree', status: reqDocs.medicalDegree?.status },
-    { key: 'medicalLicense', label: 'Medical License', status: reqDocs.medicalLicense?.status },
-  ];
 
   const verificationChecklist = [
     { key: 'nationalIdFront', label: 'National ID (Front)', status: reqDocs.nationalId?.front?.status },
@@ -312,33 +301,23 @@ export default function CompleteProfilePage() {
   const stepTitles = {
     1: 'Professional Identity',
     2: 'Academic & Professional Credentials',
-    3: 'Clinic Location',
+    3: 'Identity Documents',
     4: 'Required Verification'
   };
 
   const stepDescriptions = {
     1: "Welcome to Clinical Ethereal. Let's begin by establishing your professional profile within our secure medical network.",
     2: "Please provide your official medical registration and identity verification documents. This information will be verified against global registries.",
-    3: "Set up your clinic locations for patient appointments.",
+    3: "Upload your National ID and Syndicate Card for identity verification.",
     4: "Complete the remaining verification procedures."
   };
 
   const isStep2Valid = docMeta.medicalLicense.licenseNumber &&
-    docMeta.medicalLicense.registrationNumber &&
     docMeta.medicalLicense.issueDate &&
     docMeta.medicalLicense.expiryDate &&
     docMeta.medicalDegree.university &&
     docMeta.medicalDegree.graduationYear &&
     docMeta.medicalDegree.degree;
-
-  const isStep3Valid = clinicForm.clinicName &&
-    clinicForm.phone &&
-    clinicForm.consultationDuration > 0 &&
-    clinicForm.address.governorate &&
-    clinicForm.address.city &&
-    clinicForm.address.street &&
-    clinicForm.consultationFee > 0 &&
-    clinicForm.followUpFee > 0;
 
   const renderDocumentCard = (doc) => {
     const isUploaded = doc.status === 'uploaded' || doc.status === 'pending' || doc.status === 'verified';
@@ -367,25 +346,16 @@ export default function CompleteProfilePage() {
 
         {!isUploaded && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-50">
-            {doc.key === 'medicalDegree' && (
-              <>
-                <input placeholder="University" className={inputClass} onChange={(e) => handleDocMetaChange(doc.key, 'university', e.target.value)} />
-                <input type="number" placeholder="Graduation Year" className={inputClass} onChange={(e) => handleDocMetaChange(doc.key, 'graduationYear', e.target.value)} />
-                <input placeholder="Degree (MBBCh)" className={inputClass} onChange={(e) => handleDocMetaChange(doc.key, 'degree', e.target.value)} />
-              </>
-            )}
-            {doc.key === 'medicalLicense' && (
-              <>
-                <input placeholder="License #" className={inputClass} onChange={(e) => handleDocMetaChange(doc.key, 'licenseNumber', e.target.value)} />
-                <input type="date" className={inputClass} onChange={(e) => handleDocMetaChange(doc.key, 'issueDate', e.target.value)} />
-                <input type="date" className={inputClass} onChange={(e) => handleDocMetaChange(doc.key, 'expiryDate', e.target.value)} />
-              </>
-            )}
             {doc.key === 'syndicateCard' && (
               <>
                 <input placeholder="Syndicate #" className={`${inputClass} col-span-2`} onChange={(e) => handleDocMetaChange(doc.key, 'syndicateNumber', e.target.value)} />
                 <input type="date" className={inputClass} onChange={(e) => handleDocMetaChange(doc.key, 'issueDate', e.target.value)} />
               </>
+            )}
+            {(doc.key === 'nationalIdFront' || doc.key === 'nationalIdBack') && (
+              <p className="col-span-3 text-[11px] text-slate-400 font-medium">
+                Upload a clear photo of the {doc.key === 'nationalIdFront' ? 'front' : 'back'} side of your National ID card.
+              </p>
             )}
           </div>
         )}
@@ -537,7 +507,7 @@ export default function CompleteProfilePage() {
                             className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-md hover:bg-red-600 transition-colors z-10"
                             title="Remove image"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
@@ -706,23 +676,13 @@ export default function CompleteProfilePage() {
                 <div className="space-y-4 animate-in fade-in duration-500 max-w-2xl">
                   <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100/60">
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Medical License Number</label>
-                        <input
-                          className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                          placeholder="MD-8829-XJ"
-                          onChange={(e) => handleDocMetaChange('medicalLicense', 'licenseNumber', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Registration Number</label>
-                        <input
-                          className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                          placeholder="REG-22910-00"
-                          onChange={(e) => handleDocMetaChange('medicalLicense', 'registrationNumber', e.target.value)}
-                        />
-                      </div>
+                    <div className="mb-6">
+                      <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Medical License Number</label>
+                      <input
+                        className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
+                        placeholder="MD-8829-XJ"
+                        onChange={(e) => handleDocMetaChange('medicalLicense', 'licenseNumber', e.target.value)}
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -800,10 +760,6 @@ export default function CompleteProfilePage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 mb-6">
-                    {verificationChecklist.map(renderDocumentCard)}
-                  </div>
-
                   <div className="flex justify-between items-center pt-8 border-t border-slate-100">
                     <button type="button" onClick={() => setCurrentStep(1)} className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-2 transition-all text-sm">
                       <ArrowLeft size={16} /> Previous Step
@@ -820,182 +776,24 @@ export default function CompleteProfilePage() {
                 </div>
               )}
 
-              {/* Step 3: Clinic Location */}
+              {/* Step 3: Documents */}
               {currentStep === 3 && (
-                <div className="animate-in fade-in duration-500">
-                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
+                <div className="space-y-4 animate-in fade-in duration-500 max-w-2xl">
+                  <div className="space-y-4">
+                    {verificationChecklist.map(renderDocumentCard)}
+                  </div>
 
-                    {/* Left Column: Form */}
-                    <div className="space-y-6">
-                      <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100/60">
-                        <div className="flex justify-between items-start mb-6">
-                          <div>
-                            <h3 className="font-bold text-slate-800 text-[16px] mb-1">Primary Practice</h3>
-                            <p className="text-[13px] text-slate-500 font-medium">Provide details for your main consulting location.</p>
-                          </div>
-                          <div className="bg-[#e2f5ee] text-emerald-600 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md">
-                            ACTIVE
-                          </div>
-                        </div>
-
-                        <div className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Clinic Name</label>
-                              <input
-                                className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                                placeholder="e.g. Skin & Care Center"
-                                value={clinicForm.clinicName}
-                                onChange={(e) => setClinicForm({ ...clinicForm, clinicName: e.target.value })}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Contact Phone</label>
-                              <input
-                                className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                                placeholder="01069167252"
-                                value={clinicForm.phone}
-                                onChange={(e) => setClinicForm({ ...clinicForm, phone: e.target.value })}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Duration (mins)</label>
-                              <input
-                                type="number"
-                                className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                                placeholder="e.g. 15"
-                                value={clinicForm.consultationDuration}
-                                onChange={(e) => setClinicForm({ ...clinicForm, consultationDuration: Number(e.target.value) || 0 })}
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Clinic Address</label>
-                            <div className="grid grid-cols-3 gap-3">
-                              <input
-                                className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                                placeholder="Governorate"
-                                value={clinicForm.address.governorate}
-                                onChange={(e) => setClinicForm({ ...clinicForm, address: { ...clinicForm.address, governorate: e.target.value } })}
-                              />
-                              <input
-                                className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                                placeholder="City"
-                                value={clinicForm.address.city}
-                                onChange={(e) => setClinicForm({ ...clinicForm, address: { ...clinicForm.address, city: e.target.value } })}
-                              />
-                              <input
-                                className="w-full bg-[#f8fafc] text-slate-700 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                                placeholder="Street"
-                                value={clinicForm.address.street}
-                                onChange={(e) => setClinicForm({ ...clinicForm, address: { ...clinicForm.address, street: e.target.value } })}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Consultation Fee</label>
-                              <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[12px]">EGP</span>
-                                <input
-                                  type="number"
-                                  className="w-full bg-[#f8fafc] text-slate-700 pl-11 pr-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                                  placeholder="500"
-                                  value={clinicForm.consultationFee}
-                                  onChange={(e) => setClinicForm({ ...clinicForm, consultationFee: Number(e.target.value) || 0 })}
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-700 mb-2 block uppercase tracking-wider">Follow-up Fee</label>
-                              <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[12px]">EGP</span>
-                                <input
-                                  type="number"
-                                  className="w-full bg-[#f8fafc] text-slate-700 pl-11 pr-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400"
-                                  placeholder="200"
-                                  value={clinicForm.followUpFee}
-                                  onChange={(e) => setClinicForm({ ...clinicForm, followUpFee: Number(e.target.value) || 0 })}
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                        </div>
-                      </div>
-
-                      <button className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center text-slate-600 font-bold text-[13px] hover:bg-slate-50 hover:border-slate-300 transition-colors group">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mb-2 group-hover:bg-slate-200 transition-colors text-slate-500">
-                          <span className="text-[20px] font-light leading-none mb-0.5">+</span>
-                        </div>
-                        + Add Another Clinic
-                      </button>
-
-                      <div className="flex justify-between items-center pt-4">
-                        <button type="button" onClick={() => setCurrentStep(2)} className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-2 transition-all text-[14px]">
-                          <ArrowLeft size={18} /> Previous Step
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            clinicMutation.mutate({
-                              clinicName: clinicForm.clinicName,
-                              address: clinicForm.address,
-                              phone: clinicForm.phone,
-                              availableHours: clinicForm.availableHours,
-                              consultationDuration: clinicForm.consultationDuration,
-                              consultationFee: clinicForm.consultationFee,
-                              followUpFee: clinicForm.followUpFee
-                            }, {
-                              onSuccess: () => setCurrentStep(4)
-                            });
-                          }}
-                          disabled={clinicMutation.isPending || !isStep3Valid}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-full font-semibold text-[14px] shadow-md shadow-blue-600/20 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
-                        >
-                          {clinicMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <>Continue to Verification <ArrowRight size={18} /></>}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Right Column: Info Cards */}
-                    <div className="space-y-4">
-                      <div className="bg-[#f8fafc] rounded-[2rem] p-6 border border-slate-100 shadow-sm">
-                        <div className="flex items-center gap-2 text-slate-800 font-bold text-[14px] mb-3">
-                          <Info size={18} className="text-blue-600" />
-                          <span>Why we need this</span>
-                        </div>
-                        <p className="text-[13px] text-slate-500 font-medium leading-relaxed pr-2">
-                          This information will be used to populate your public profile and allow patients to book appointments at specific physical locations. You can always edit these later in your settings.
-                        </p>
-                      </div>
-
-                      <div className="relative rounded-[2rem] overflow-hidden border border-slate-200 bg-slate-300 h-48 shadow-sm shrink-0">
-                        <div className="absolute inset-0 bg-slate-400 mix-blend-multiply opacity-20"></div>
-                        {/* Pseudo map visual using pure CSS styling since image asset is missing */}
-                        <div className="absolute inset-0 flex items-center justify-center translate-y-[-10px] scale-110">
-                          <div className="w-full h-10 border-t border-b border-white/20 rotate-12 bg-slate-100/10"></div>
-                          <div className="absolute w-10 h-full border-l border-r border-white/20 -rotate-12 bg-slate-100/10"></div>
-                        </div>
-                        <div className="absolute top-[40%] left-[30%]">
-                          <MapPin size={24} className="text-slate-500" fill="currentColor" opacity="0.5" />
-                        </div>
-                        <div className="absolute bottom-4 left-4 right-4 bg-white/70 backdrop-blur-md rounded-2xl p-4 flex items-center gap-2 shadow-sm border border-white/40">
-                          <MapPin size={20} className="text-blue-600" />
-                          <span className="text-[13px] font-bold text-slate-800">Clinic Map Verification</span>
-                        </div>
-                      </div>
-
-                      <div className="bg-[#f0fbfa] border-l-[3px] border-emerald-500 rounded-r-[2rem] rounded-l-xl p-6 shadow-sm">
-                        <h4 className="text-[11px] font-black text-emerald-600 uppercase tracking-widest mb-2">TIP</h4>
-                        <p className="text-[13px] text-slate-600 font-medium leading-relaxed">
-                          Adding multiple clinics can increase your visibility to patients in different neighborhoods by up to 45%.
-                        </p>
-                      </div>
-                    </div>
-
+                  <div className="flex justify-between items-center pt-8 border-t border-slate-100">
+                    <button type="button" onClick={() => setCurrentStep(2)} className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-2 transition-all text-sm">
+                      <ArrowLeft size={16} /> Previous Step
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(4)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-full font-semibold text-[13px] shadow-md shadow-blue-600/20 flex items-center gap-2 transition-all active:scale-95"
+                    >
+                      Save and Continue <ArrowRight size={16} />
+                    </button>
                   </div>
                 </div>
               )}
@@ -1021,7 +819,6 @@ export default function CompleteProfilePage() {
                   </div>
                 </div>
               )}
-
             </div>
           </div>
         </div>
