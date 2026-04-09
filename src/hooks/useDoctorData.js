@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
   getDoctorBasicInfo,
+  createDoctorBasicInfo,
   updateDoctorBasicInfo,
   updateDoctorProfessionalInfo,
   uploadDoctorDocument,
@@ -25,6 +26,19 @@ export const useDoctorData = () => {
   return useQuery({
     queryKey: ['doctorBasicInfo'],
     queryFn: getDoctorBasicInfo,
+  });
+};
+
+export const useCreateDoctorBasicInfo = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createDoctorBasicInfo,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to save basic info');
+    }
   });
 };
 

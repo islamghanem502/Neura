@@ -31,6 +31,15 @@ export const getDoctorBasicInfo = async () => {
 };
 
 /**
+ * Create the logged-in doctor's basic info (first time).
+ * POST /doctors/me/basic-info
+ */
+export const createDoctorBasicInfo = async (data) => {
+  const response = await axiosInstance.post('/doctors/me/basic-info', data);
+  return response.data;
+};
+
+/**
  * Update the logged-in doctor's basic info.
  * PATCH /doctors/me/basic-info
  */
