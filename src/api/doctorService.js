@@ -9,12 +9,33 @@ export const getDoctorById = async (doctorId) => {
   return response.data;
 };
 
+// ── Profile Image ─────────────────────────────────────────────────────────────
+
+export const uploadProfileImage = async (formData) => {
+  const response = await axiosInstance.post('/profile/profile-image', formData);
+  return response.data;
+};
+
+export const deleteProfileImage = async () => {
+  const response = await axiosInstance.delete('/profile/profile-image');
+  return response.data;
+};
+
 /**
  * Fetch the logged-in doctor's basic info.
  * GET /doctors/me/basic-info
  */
 export const getDoctorBasicInfo = async () => {
   const response = await axiosInstance.get('/doctors/me/basic-info');
+  return response.data;
+};
+
+/**
+ * Create the logged-in doctor's basic info (first time).
+ * POST /doctors/me/basic-info
+ */
+export const createDoctorBasicInfo = async (data) => {
+  const response = await axiosInstance.post('/doctors/me/basic-info', data);
   return response.data;
 };
 

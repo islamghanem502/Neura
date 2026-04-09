@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
   getDoctorBasicInfo,
+  createDoctorBasicInfo,
   updateDoctorBasicInfo,
   updateDoctorProfessionalInfo,
   uploadDoctorDocument,
@@ -17,12 +18,27 @@ import {
   addClinicInfo,
   updateClinicInfo,
   deleteClinicInfo,
+  uploadProfileImage,
+  deleteProfileImage,
 } from '../api/doctorService';
 
 export const useDoctorData = () => {
   return useQuery({
     queryKey: ['doctorBasicInfo'],
     queryFn: getDoctorBasicInfo,
+  });
+};
+
+export const useCreateDoctorBasicInfo = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createDoctorBasicInfo,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to save basic info');
+    }
   });
 };
 
@@ -64,6 +80,34 @@ export const useUploadDoctorDocument = () => {
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Failed to upload document');
+    }
+  });
+};
+
+export const useUploadProfileImage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: uploadProfileImage,
+    onSuccess: () => {
+      toast.success('Profile image uploaded successfully');
+      queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to upload profile image');
+    }
+  });
+};
+
+export const useDeleteProfileImage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteProfileImage,
+    onSuccess: () => {
+      toast.success('Profile image deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to delete profile image');
     }
   });
 };
