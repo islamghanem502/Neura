@@ -22,6 +22,15 @@ import {
   deleteProfileImage,
 } from '../api/doctorService';
 
+/** Mongoose optimistic-locking conflict (VersionError) — safe to retry after a short delay. */
+const isMongooseVersionConflict = (error) => {
+  const msg = String(error?.response?.data?.message ?? error?.message ?? '');
+  return (
+    msg.includes('No matching document found for id') ||
+    (msg.includes('version') && msg.includes('modifiedPaths'))
+  );
+};
+
 export const useDoctorData = () => {
   return useQuery({
     queryKey: ['doctorBasicInfo'],
@@ -46,6 +55,8 @@ export const useUpdateDoctorBasicInfo = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateDoctorBasicInfo,
+    retry: (failureCount, error) => failureCount < 3 && isMongooseVersionConflict(error),
+    retryDelay: (attemptIndex) => Math.min(400 * 2 ** attemptIndex, 2500),
     onSuccess: () => {
       toast.success('Basic info updated successfully');
       queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
@@ -60,9 +71,12 @@ export const useUpdateDoctorProfessionalInfo = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateDoctorProfessionalInfo,
+    retry: (failureCount, error) => failureCount < 3 && isMongooseVersionConflict(error),
+    retryDelay: (attemptIndex) => Math.min(400 * 2 ** attemptIndex, 2500),
     onSuccess: () => {
       toast.success('Professional info updated successfully');
       queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
+      queryClient.invalidateQueries({ queryKey: ['doctorProfessionalInfo'] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Failed to update professional info');
@@ -88,8 +102,41 @@ export const useUploadProfileImage = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: uploadProfileImage,
-    onSuccess: () => {
+    onSuccess: (res) => {
       toast.success('Profile image uploaded successfully');
+      // Optimistically patch cached doctor basic info so UI updates immediately.
+      const uploadedUrl =
+        res?.data?.profileImage?.imageUrl ??
+        res?.data?.imageUrl ??
+        res?.profileImage?.imageUrl ??
+        res?.imageUrl ??
+        null;
+
+      if (uploadedUrl) {
+        queryClient.setQueryData(['doctorBasicInfo'], (old) => {
+          if (!old) return old;
+
+          // Common API shape in this repo: { data: { basicInfo: { ... } } }
+          if (old?.data?.basicInfo) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                basicInfo: {
+                  ...old.data.basicInfo,
+                  profileImage: { imageUrl: uploadedUrl },
+                },
+              },
+            };
+          }
+
+          // Fallback: basic info may already be at root
+          return {
+            ...old,
+            profileImage: { imageUrl: uploadedUrl },
+          };
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
     },
     onError: (error) => {
@@ -104,6 +151,23 @@ export const useDeleteProfileImage = () => {
     mutationFn: deleteProfileImage,
     onSuccess: () => {
       toast.success('Profile image deleted successfully');
+      // Patch cache immediately so UI removes the image without waiting.
+      queryClient.setQueryData(['doctorBasicInfo'], (old) => {
+        if (!old) return old;
+        if (old?.data?.basicInfo) {
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              basicInfo: {
+                ...old.data.basicInfo,
+                profileImage: null,
+              },
+            },
+          };
+        }
+        return { ...old, profileImage: null };
+      });
       queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
     },
     onError: (error) => {
