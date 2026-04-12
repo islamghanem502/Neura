@@ -38,12 +38,16 @@ export function useLogin() {
         lastName = parts.slice(1).join(' ');
       }
 
-      const userObj = { ...decodedUser, firstName, lastName };
+      const userFromRes = res.data?.user || res.user || {};
+      const userObj = { ...decodedUser, firstName, lastName, ...userFromRes };
       
       login(accessToken, userObj);
       toast.success(res.message || `Welcome back, ${firstName}!`);
       
-      const route = ROLE_ROUTES[userObj.role] ?? '/';
+      let route = ROLE_ROUTES[userObj.role] ?? '/';
+      if (userObj.role === 'doctor' && !userObj.isVerified) {
+        route = '/dashboard/doctor/profile';
+      }
       navigate(route, { replace: true });
     },
     onError: (err) => {
@@ -68,9 +72,16 @@ export function useRegister() {
         return;
       }
 
-      login(accessToken, user);
-      toast.success(res.message || `Account created! Welcome to NEURA, ${user.firstName}.`);
-      const route = ROLE_ROUTES[user.role] ?? '/';
+      const decodedUser = decodeToken(accessToken) || {};
+      const fullUser = { ...decodedUser, ...user };
+
+      login(accessToken, fullUser);
+      toast.success(res.message || `Account created! Welcome to NEURA, ${fullUser.firstName || ''}.`);
+      
+      let route = ROLE_ROUTES[fullUser.role] ?? '/';
+      if (fullUser.role === 'doctor' && !fullUser.isVerified) {
+        route = '/dashboard/doctor/profile';
+      }
       navigate(route, { replace: true });
     },
     onError: (err) => {
@@ -85,6 +96,7 @@ export function useLogout() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    localStorage.removeItem('neura_doctor_submitted');
     logout();
     toast.success('Signed out successfully.');
     navigate('/auth/login', { replace: true });

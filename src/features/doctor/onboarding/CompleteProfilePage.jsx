@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorData, useDoctorProfessionalInfo } from '../../../hooks/useDoctorData';
 import { useLogout } from '../../../hooks/useAuth';
-import { User, Briefcase, FileText, CheckCircle, Search, Bell, ChevronRight, LogOut, Loader2 } from 'lucide-react';
+import { User, Briefcase, FileText, CheckCircle, Search, Bell, ChevronRight, LogOut, Loader2, MapPin, Calendar } from 'lucide-react';
 import { ProfessionalIdentityStep } from './components/ProfessionalIdentityStep';
-import { ProfessionalInfoStep } from './components/ProfessionalInfoStep';
-import { CredentialsAndDocuments } from './components/CredentialsAndDocuments';
+import { CredentialsStep } from './components/CredentialsStep';
+import { DocumentsStep } from './components/DocumentsStep';
 import { VerificationStep } from './components/VerificationStep';
+import { PendingVerificationPage } from './components/PendingVerificationPage';
 
 const TOTAL_STEPS = 4;
 
 const SIDEBAR_STEPS = [
   { id: 1, title: 'Identity', icon: User },
-  { id: 2, title: 'Professional Info', icon: Briefcase },
-  { id: 3, title: 'Documents & Credentials', icon: FileText },
+  { id: 2, title: 'Credentials', icon: Briefcase },
+  { id: 3, title: 'Documents', icon: FileText },
   { id: 4, title: 'Verification', icon: CheckCircle },
 ];
 
@@ -23,53 +25,58 @@ const getProfileImageUrl = (doctorData) => {
   return doctorData.profileImage?.imageUrl || null;
 };
 
+const SUBMITTED_KEY = 'neura_doctor_submitted';
+
 export default function CompleteProfilePage() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [showPending, setShowPending] = useState(
+    () => localStorage.getItem(SUBMITTED_KEY) === 'true'
+  );
   const queryClient = useQueryClient();
   const { data: doctorRes, isLoading } = useDoctorData();
-  const { data: profInfoRes } = useDoctorProfessionalInfo();
   const { logout } = useLogout();
 
-  // When returning to Professional Info, always reload from GET /professional-info.
-  useEffect(() => {
-    if (currentStep !== 2) return;
-    queryClient.refetchQueries({ queryKey: ['doctorProfessionalInfo'] });
-  }, [currentStep, queryClient]);
-
   const [docMeta, setDocMeta] = useState({
-    medicalLicense: { licenseNumber: '', issueDate: '', expiryDate: '' },
     medicalDegree: { university: '', graduationYear: '', degree: '' },
     syndicateCard: { syndicateNumber: '', issueDate: '' }
   });
+
+  const doctorDataRaw = doctorRes?.data?.basicInfo || doctorRes || {};
+
+  // Auto-redirect if already verified
+  useEffect(() => {
+    if (doctorDataRaw?.isVerified === true) {
+      localStorage.removeItem(SUBMITTED_KEY);
+      navigate('/dashboard/doctor', { replace: true });
+    }
+  }, [doctorDataRaw?.isVerified, navigate]);
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center bg-[#f8fafc]"><Loader2 className="animate-spin text-blue-600" size={32} /></div>;
   }
 
-  const basicInfoExists = !!(doctorRes?.data?.basicInfo?.phone || doctorRes?.data?.basicInfo?.firstName);
-  const doctorData = doctorRes?.data?.basicInfo || doctorRes || {};
-  // GET /professional-info returns { data: { professionalInfo: { awards, certificates, ... } } }.
-  // Spreading profInfoRes.data would put awards under profData.professionalInfo.awards, not profData.awards.
-  const fromBasicProf =
-    doctorRes?.data?.professionalInfo || doctorData.professionalInfo || {};
-  const fromProfEndpoint = profInfoRes?.data?.professionalInfo;
-  const profData = {
-    ...fromBasicProf,
-    ...(fromProfEndpoint && typeof fromProfEndpoint === 'object' ? fromProfEndpoint : {}),
-  };
+  if (showPending) {
+    return <PendingVerificationPage />;
+  }
+
+  const displayStep = currentStep;
+
+  const basicInfoExists = !!(doctorDataRaw?.phone || doctorDataRaw?.firstName);
+  const doctorData = doctorDataRaw;
 
   const stepTitles = {
     1: 'Professional Identity',
-    2: 'Professional Information',
-    3: 'Documents & Credentials',
-    4: 'Required Verification'
+    2: 'Academic & Professional Credentials',
+    3: 'Required Documents',
+    4: 'Final Verification'
   };
 
   const stepDescriptions = {
     1: "Welcome to Clinical Ethereal. Let's begin by establishing your professional profile within our secure medical network.",
-    2: 'Add your clinical profile, memberships, and professional awards and certificates with supporting documents.',
-    3: "Please provide your official medical registration, identity verification documents, and upload supporting files. This information will be verified against global registries.",
+    2: 'Please provide your official medical registration and university details. This information will be verified against global medical registries.',
+    3: "Please upload your official medical registration and identity verification documents.",
     4: "Complete the remaining verification procedures."
   };
 
@@ -83,42 +90,42 @@ export default function CompleteProfilePage() {
         </div>
 
         <div className="px-8 mb-6">
-          <h2 className="text-[13px] font-bold text-slate-800">Onboarding</h2>
-          <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Step {currentStep} of {TOTAL_STEPS}</p>
+          <h2 className="text-[14px] font-extrabold text-slate-800">Onboarding</h2>
+          <p className="text-[12px] font-medium text-slate-500 mt-1">Step {displayStep} of {TOTAL_STEPS}</p>
           <div className="w-full bg-slate-100 h-1.5 mt-3 rounded-full overflow-hidden">
             <div
               className="bg-blue-600 h-full transition-all duration-500 rounded-full"
-              style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }}
+              style={{ width: `${(displayStep / TOTAL_STEPS) * 100}%` }}
             />
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1">
+        <nav className="flex-1 pl-4 space-y-1">
           {SIDEBAR_STEPS.map((step) => {
-            const isActive = step.id === currentStep;
+            const isActive = step.id === displayStep;
             const Icon = step.icon;
 
             return (
               <div
                 key={step.id}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-default transition-all ${isActive
-                  ? 'bg-blue-50 text-blue-600 font-semibold'
-                  : 'text-slate-500 hover:text-slate-700 font-medium'
+                className={`flex items-center gap-3 py-3 rounded-l-full cursor-default transition-all ${isActive
+                  ? 'bg-[#E9EFFD] text-blue-600 font-semibold shadow-[0px_1px_2px_rgba(0,0,0,0.05)] pl-6 pr-4'
+                  : 'text-slate-500 hover:text-slate-700 font-medium pl-6 pr-4'
                   }`}
               >
                 <Icon size={16} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
-                <span className="text-[13px]">{step.title}</span>
+                <span className="text-[14px]">{step.title}</span>
               </div>
             );
           })}
         </nav>
 
         <div className="p-6">
-          <div className="bg-slate-50 rounded-3xl p-4 flex items-center gap-3 border border-slate-100">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm shadow-blue-200">
-              {Math.round((currentStep / TOTAL_STEPS) * 100)}%
+          <div className="bg-[#F2F4F6] rounded-[24px] p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-[12px] font-bold shrink-0">
+              {Math.round((displayStep / TOTAL_STEPS) * 100)}%
             </div>
-            <span className="text-[11px] font-bold text-slate-600">Profile Strength</span>
+            <span className="text-[12px] font-semibold text-[#434655]">Profile Strength</span>
           </div>
         </div>
       </aside>
@@ -183,31 +190,33 @@ export default function CompleteProfilePage() {
         </header>
 
         {/* Dynamic Content Body */}
-        <div className="flex-1 overflow-auto p-4 md:p-8 pt-6">
-          <div className="max-w-4xl">
-            <div className="mb-8">
-              <h4 className="text-[10px] uppercase font-bold tracking-widest text-blue-600 mb-2">Getting Started</h4>
-              <h2 className="text-[32px] font-bold tracking-tight text-slate-900 mb-2">{stepTitles[currentStep]}</h2>
-              <p className="text-slate-500 font-medium text-[14px] max-w-2xl">{stepDescriptions[currentStep]}</p>
-            </div>
+        <div className="flex-1 overflow-auto p-4 md:p-10 pt-8">
+          <div className="max-w-[1440px] mx-auto">
+            {![4].includes(displayStep) && (
+              <div className="mb-8 pl-8">
+                <h2 className="text-[36px] font-bold tracking-tight text-slate-900 mb-2">{stepTitles[displayStep]}</h2>
+                <p className="text-slate-500 font-medium text-[14px] max-w-2xl">{stepDescriptions[displayStep]}</p>
+              </div>
+            )}
 
             <div className="pb-20">
-              {currentStep === 1 && (
+              {displayStep === 1 && (
                 <ProfessionalIdentityStep
                   doctorData={doctorData}
                   basicInfoExists={basicInfoExists}
                   onNext={setCurrentStep}
                 />
               )}
-              {currentStep === 2 && (
-                <ProfessionalInfoStep
-                  profData={profData}
+              {displayStep === 2 && (
+                <CredentialsStep
+                  docMeta={docMeta}
+                  setDocMeta={setDocMeta}
                   onNext={setCurrentStep}
                   onPrev={setCurrentStep}
                 />
               )}
-              {currentStep === 3 && (
-                <CredentialsAndDocuments
+              {displayStep === 3 && (
+                <DocumentsStep
                   doctorData={doctorData}
                   docMeta={docMeta}
                   setDocMeta={setDocMeta}
@@ -215,9 +224,15 @@ export default function CompleteProfilePage() {
                   onPrev={setCurrentStep}
                 />
               )}
-              {currentStep === 4 && (
+              {displayStep === 4 && (
                 <VerificationStep
+                  doctorData={doctorData}
+                  docMeta={docMeta}
                   onPrev={setCurrentStep}
+                  onSubmitted={() => {
+                    localStorage.setItem(SUBMITTED_KEY, 'true');
+                    setShowPending(true);
+                  }}
                 />
               )}
             </div>

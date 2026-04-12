@@ -183,11 +183,12 @@ export const useSubmitDoctorProfile = () => {
     onSuccess: () => {
       toast.success('Profile submitted for review successfully!');
       queryClient.invalidateQueries({ queryKey: ['doctorBasicInfo'] });
-      // Redirect out of profile page since accountStatus is likely pending_verification now
-      window.location.href = '/dashboard/doctor';
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to submit profile for review');
+      const msg = error.response?.data?.message || 'Failed to submit profile for review';
+      if (!msg.toLowerCase().includes('already submitted')) {
+         toast.error(msg);
+      }
     }
   });
 };

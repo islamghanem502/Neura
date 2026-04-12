@@ -12,10 +12,14 @@ const ROLE_ROUTES = {
  * Redirects already-authenticated users away from public pages (login, register, landing).
  */
 export default function PublicRoute() {
-  const { isAuthenticated, role } = useAuthContext();
+  const { isAuthenticated, role, user } = useAuthContext();
 
   if (isAuthenticated && role) {
-    return <Navigate to={ROLE_ROUTES[role] ?? '/'} replace />;
+    let route = ROLE_ROUTES[role] ?? '/';
+    if (role === 'doctor' && user && !user.isVerified) {
+      route = '/dashboard/doctor/profile';
+    }
+    return <Navigate to={route} replace />;
   }
 
   return <Outlet />;

@@ -48,7 +48,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen font-sans selection:bg-blue-500/30 selection:text-blue-900 bg-white text-zinc-900 overflow-x-hidden">
+    <div className="min-h-screen font-sans selection:bg-blue-500/30 selection:text-blue-900 bg-white text-zinc-900 overflow-x-clip">
       <Header />
 
       <main>
