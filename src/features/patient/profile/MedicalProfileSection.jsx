@@ -34,59 +34,54 @@ const MedicalProfileSection = ({
   // Color configurations
   const colorConfig = {
     blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
+      bg: "bg-blue-50/70",
+      border: "border-blue-100",
       text: "text-blue-600",
-      light: "bg-blue-100",
+      light: "bg-blue-50",
       dark: "bg-blue-600",
-      gradient: "from-blue-500 to-blue-600",
       hover: "hover:bg-blue-600",
       ring: "focus:ring-blue-500",
-      badge: "bg-blue-100 text-blue-700",
+      badge: "bg-blue-50/50 border border-blue-100 text-blue-700",
     },
     emerald: {
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
+      bg: "bg-emerald-50/70",
+      border: "border-emerald-100",
       text: "text-emerald-600",
-      light: "bg-emerald-100",
+      light: "bg-emerald-50",
       dark: "bg-emerald-600",
-      gradient: "from-emerald-500 to-teal-500",
       hover: "hover:bg-emerald-600",
       ring: "focus:ring-emerald-500",
-      badge: "bg-emerald-100 text-emerald-700",
+      badge: "bg-emerald-50/50 border border-emerald-100 text-emerald-700",
     },
     purple: {
-      bg: "bg-purple-50",
-      border: "border-purple-200",
+      bg: "bg-purple-50/70",
+      border: "border-purple-100",
       text: "text-purple-600",
-      light: "bg-purple-100",
+      light: "bg-purple-50",
       dark: "bg-purple-600",
-      gradient: "from-purple-500 to-pink-500",
       hover: "hover:bg-purple-600",
       ring: "focus:ring-purple-500",
-      badge: "bg-purple-100 text-purple-700",
+      badge: "bg-purple-50/50 border border-purple-100 text-purple-700",
     },
     rose: {
-      bg: "bg-rose-50",
-      border: "border-rose-200",
+      bg: "bg-rose-50/70",
+      border: "border-rose-100",
       text: "text-rose-600",
-      light: "bg-rose-100",
+      light: "bg-rose-50",
       dark: "bg-rose-600",
-      gradient: "from-rose-500 to-pink-500",
       hover: "hover:bg-rose-600",
       ring: "focus:ring-rose-500",
-      badge: "bg-rose-100 text-rose-700",
+      badge: "bg-rose-50/50 border border-rose-100 text-rose-700",
     },
     amber: {
-      bg: "bg-amber-50",
-      border: "border-amber-200",
+      bg: "bg-amber-50/70",
+      border: "border-amber-100",
       text: "text-amber-600",
-      light: "bg-amber-100",
+      light: "bg-amber-50",
       dark: "bg-amber-600",
-      gradient: "from-amber-500 to-orange-500",
       hover: "hover:bg-amber-600",
       ring: "focus:ring-amber-500",
-      badge: "bg-amber-100 text-amber-700",
+      badge: "bg-amber-50/50 border border-amber-100 text-amber-700",
     },
   };
 
@@ -174,16 +169,15 @@ const MedicalProfileSection = ({
 
   if (isLoading) {
     return (
-      <div className={`${colors.bg} rounded-2xl shadow-lg border ${colors.border} p-6`}>
+      <div className="bg-white rounded-2xl border border-slate-100 p-6">
         <div className="animate-pulse">
           <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 ${colors.light} rounded-xl`}></div>
-            <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+            <div className="w-8 h-8 bg-slate-100 rounded-xl"></div>
+            <div className="h-5 bg-slate-100 rounded w-1/3"></div>
           </div>
           <div className="space-y-3">
-            <div className="h-20 bg-white/50 rounded-xl"></div>
-            <div className="h-20 bg-white/50 rounded-xl"></div>
-            <div className="h-20 bg-white/50 rounded-xl"></div>
+            <div className="h-14 bg-slate-50/50 rounded-xl"></div>
+            <div className="h-14 bg-slate-50/50 rounded-xl"></div>
           </div>
         </div>
       </div>
@@ -191,34 +185,34 @@ const MedicalProfileSection = ({
   }
 
   return (
-    <div className={`${colors.bg} rounded-2xl shadow-lg border ${colors.border} overflow-hidden hover:shadow-xl transition-all duration-300`}>
+    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
       {/* Header */}
-      <div className={`bg-gradient-to-r ${colors.gradient} px-6 py-4`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white">
-            <Icon size={20} />
-            <h3 className="font-bold">{title}</h3>
+      <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-8 h-8 rounded-xl ${colors.bg} ${colors.text} flex items-center justify-center`}>
+            <Icon size={16} />
           </div>
-          <span className={`bg-white/20 text-white px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm`}>
-            {items.length} {items.length === 1 ? 'Record' : 'Records'}
-          </span>
+          <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
         </div>
+        <span className={`text-[11px] font-bold ${colors.badge} px-2.5 py-0.5 rounded-full`}>
+          {items.length} {items.length === 1 ? 'Record' : 'Records'}
+        </span>
       </div>
 
       <div className="p-6">
         {/* Error Display */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-shake">
-            <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="mb-4 p-4 bg-red-50/80 border border-red-150 rounded-xl flex items-start gap-3">
+            <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-red-800">Error</p>
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-xs font-bold text-red-800">Error</p>
+              <p className="text-xs text-red-600">{error}</p>
             </div>
             <button 
               onClick={() => setError(null)}
-              className="text-red-400 hover:text-red-600"
+              className="text-red-400 hover:text-red-650"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
         )}
@@ -229,20 +223,20 @@ const MedicalProfileSection = ({
             {items.map((item) => (
               <div
                 key={item._id}
-                className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-all group"
+                className="bg-slate-50/40 rounded-xl border border-gray-100 overflow-hidden group"
               >
                 {/* Main item header - always visible */}
                 <div className="p-4 cursor-pointer" onClick={() => toggleExpand(item._id)}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-800">
+                        <span className="font-bold text-gray-700 text-sm">
                           {item[fields[0]?.name] || 'Unnamed'}
                         </span>
                         {fields.slice(1, 3).map(field => {
                           if (item[field.name]) {
                             return (
-                              <span key={field.name} className={`text-xs ${colors.badge} px-2 py-0.5 rounded-full`}>
+                              <span key={field.name} className={`text-[10px] ${colors.badge} px-2 py-0.5 rounded-md font-bold`}>
                                 {item[field.name]}
                               </span>
                             );
@@ -250,14 +244,14 @@ const MedicalProfileSection = ({
                           return null;
                         })}
                       </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                      <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-400">
                         {expandedItems[item._id] ? (
-                          <span className="flex items-center gap-1 text-xs">
-                            <ChevronUp size={14} /> Show less
+                          <span className="flex items-center gap-1 font-semibold">
+                            <ChevronUp size={12} /> Show less
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 text-xs">
-                            <ChevronDown size={14} /> Show details
+                          <span className="flex items-center gap-1 font-semibold">
+                            <ChevronDown size={12} /> Show details
                           </span>
                         )}
                       </div>
@@ -265,17 +259,17 @@ const MedicalProfileSection = ({
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-lg transition-colors"
                         title="Edit"
                       >
-                        <Edit3 size={16} />
+                        <Edit3 size={15} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(item._id); }}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-red-600 hover:bg-red-50/50 rounded-lg transition-colors"
                         title="Delete"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>
@@ -283,14 +277,14 @@ const MedicalProfileSection = ({
 
                 {/* Expanded details */}
                 {expandedItems[item._id] && (
-                  <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/50">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-slate-50/80">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
                       {fields.map((field) => {
                         if (field.name === fields[0]?.name) return null;
                         return (
                           <div key={field.name} className="col-span-2 md:col-span-1">
-                            <span className="text-xs text-gray-500 block">{field.label}</span>
-                            <span className="font-medium text-gray-800">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-0.5">{field.label}</span>
+                            <span className="font-semibold text-gray-700">
                               {formatFieldValue(item[field.name], field)}
                             </span>
                           </div>
@@ -306,28 +300,27 @@ const MedicalProfileSection = ({
 
         {/* Empty State */}
         {items.length === 0 && !isAdding && (
-          <div className="mb-6 p-8 bg-white/50 rounded-xl text-center border-2 border-dashed border-gray-200">
-            <div className={`w-16 h-16 ${colors.light} rounded-full flex items-center justify-center mx-auto mb-4`}>
-              <Icon size={32} className={colors.text} />
+          <div className="mb-6 p-8 bg-white border border-dashed border-slate-100 rounded-xl text-center">
+            <div className={`w-12 h-12 ${colors.bg} rounded-full flex items-center justify-center mx-auto mb-3`}>
+              <Icon size={24} className={colors.text} />
             </div>
-            <h4 className="font-semibold text-gray-700 mb-1">No {title} Yet</h4>
-            <p className="text-sm text-gray-500 mb-4">{emptyMessage}</p>
+            <h4 className="font-bold text-gray-700 mb-1 text-sm">No {title} Yet</h4>
+            <p className="text-xs text-gray-400 mb-4">{emptyMessage}</p>
           </div>
         )}
 
         {/* Add/Edit Form */}
         {isAdding && (
           <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-            <div className={`bg-white p-5 rounded-xl border-2 ${colors.border} shadow-inner`}>
-              <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                <div className={`w-1 h-5 ${colors.dark} rounded-full`}></div>
+            <div className="bg-slate-50/50 p-5 rounded-xl border border-gray-200">
+              <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-sm">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h4>
               
               <div className="space-y-4">
                 {fields.map((field) => (
                   <div key={field.name}>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    <label className="block text-[10px] font-bold text-gray-405 uppercase tracking-wider mb-1">
                       {field.label}
                       {field.required && <span className="text-red-500 ml-1">*</span>}
                     </label>
@@ -337,7 +330,7 @@ const MedicalProfileSection = ({
                         name={field.name}
                         value={formData[field.name] || ""}
                         onChange={handleInputChange}
-                        className="w-full p-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all bg-white"
+                        className="w-full p-2.5 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white text-sm font-medium text-gray-700"
                         required={field.required}
                       >
                         <option value="">Select {field.label.toLowerCase()}</option>
@@ -353,7 +346,7 @@ const MedicalProfileSection = ({
                         value={formData[field.name] || ""}
                         onChange={handleInputChange}
                         placeholder={`Enter ${field.label.toLowerCase()}`}
-                        className="w-full p-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
+                        className="w-full p-2.5 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white text-sm font-medium text-gray-700 resize-none"
                         rows="3"
                         required={field.required}
                       />
@@ -364,7 +357,7 @@ const MedicalProfileSection = ({
                         value={formData[field.name] || ""}
                         onChange={handleInputChange}
                         placeholder={`Enter ${field.label.toLowerCase()}`}
-                        className="w-full p-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className="w-full p-2.5 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white text-sm font-medium text-gray-700"
                         required={field.required}
                         min={field.type === "number" ? 0 : undefined}
                         step={field.type === "number" ? "1" : undefined}
@@ -372,7 +365,7 @@ const MedicalProfileSection = ({
                     )}
                     
                     {field.helpText && (
-                      <p className="mt-1 text-xs text-gray-500">{field.helpText}</p>
+                      <p className="mt-1 text-[10px] text-gray-400 font-semibold">{field.helpText}</p>
                     )}
                   </div>
                 ))}
@@ -382,16 +375,16 @@ const MedicalProfileSection = ({
                 <button
                   type="submit"
                   disabled={localLoading}
-                  className={`flex-1 bg-gradient-to-r ${colors.gradient} text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs"
                 >
                   {localLoading ? (
                     <>
-                      <Loader2 size={18} className="animate-spin" />
+                      <Loader2 size={14} className="animate-spin" />
                       Saving...
                     </>
                   ) : (
                     <>
-                      <Save size={18} />
+                      <Save size={14} />
                       {editingId ? 'Update' : 'Add'} {title.slice(0, -1)}
                     </>
                   )}
@@ -399,7 +392,7 @@ const MedicalProfileSection = ({
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-medium text-gray-700"
+                  className="px-4 py-2.5 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-bold text-xs text-gray-600"
                 >
                   Cancel
                 </button>
@@ -412,25 +405,13 @@ const MedicalProfileSection = ({
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className={`w-full flex items-center justify-center gap-2 py-3 bg-white border-2 border-dashed ${colors.border} text-${color}-600 rounded-xl hover:bg-${color}-50 transition-all font-semibold group`}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-dashed border-gray-200 text-gray-600 hover:text-gray-800 hover:bg-slate-50 rounded-xl transition-colors font-bold text-xs"
           >
-            <Plus size={20} className="group-hover:scale-110 transition-transform" />
+            <Plus size={16} />
             Add {title.slice(0, -1)}
           </button>
         )}
       </div>
-
-      {/* Animation keyframes */}
-      <style jsx>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-          20%, 40%, 60%, 80% { transform: translateX(2px); }
-        }
-        .animate-shake {
-          animation: shake 0.5s ease-in-out;
-        }
-      `}</style>
     </div>
   );
 };

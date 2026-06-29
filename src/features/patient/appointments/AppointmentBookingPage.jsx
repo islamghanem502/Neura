@@ -127,6 +127,10 @@ const AppointmentBookingPage = () => {
   const errorRef = useRef(null);
 
   // ── Fetch doctor profile ──────────────────────────────────────────────────
+  // staleTime: 0  → always treat cached data as stale so newly-added clinics
+  //                  are picked up on every page visit.
+  // refetchOnMount: 'always' → unconditionally re-fetch when the component mounts,
+  //                            even if data already exists in the cache.
   const {
     data: doctorData,
     isLoading: loadingDoctor,
@@ -135,6 +139,8 @@ const AppointmentBookingPage = () => {
     queryKey: ["doctor", doctorId],
     queryFn: () => getDoctorById(doctorId),
     enabled: !!doctorId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const profile = doctorData?.data?.doctorProfile;
@@ -377,13 +383,21 @@ const AppointmentBookingPage = () => {
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-5">
           <div className="flex items-start gap-5">
             {/* Avatar */}
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-xl font-black flex-shrink-0 shadow-lg">
-              {(profile.fullName || "")
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-xl font-black flex-shrink-0 shadow-lg overflow-hidden">
+              {profile.profileImage ? (
+                <img 
+                  src={typeof profile.profileImage === 'string' ? profile.profileImage : profile.profileImage?.imageUrl} 
+                  alt={profile.fullName} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                (profile.fullName || "")
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()
+              )}
             </div>
 
             <div className="flex-1 min-w-0">

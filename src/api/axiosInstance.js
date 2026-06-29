@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
   withCredentials: true,
   // Note: We deliberately omit a hardcoded 'Content-Type'. 
   // Axios will automatically set 'application/json' for normal data 
@@ -30,7 +30,11 @@ axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('neura_token');
     if (token && token !== 'undefined' && token !== 'null') {
-      config.headers.set('Authorization', `Bearer ${token}`);
+      if (config.headers.set) {
+        config.headers.set('Authorization', `Bearer ${token}`);
+      } else {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -41,6 +45,13 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
+    console.error('[Axios Error]', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
     const originalRequest = error.config;
     const status = error.response?.status;
 

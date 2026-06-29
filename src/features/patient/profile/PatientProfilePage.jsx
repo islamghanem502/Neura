@@ -1,45 +1,28 @@
 import React, { useState, useRef } from "react";
+import { useNavigate, useMatch } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { patientService } from "../../../api/patientService";
 import {
-  User,
-  Phone,
-  Activity,
-  Edit3,
-  Save,
-  X,
-  MapPin,
-  Camera,
-  Loader2,
-  Trash2,
-  Pill,
-  Users,
-  Syringe,
-  AlertTriangle,
-  Heart,
-  Mail,
-  Calendar,
-  Weight,
-  Ruler,
-  Droplet,
-  HeartPulse,
-  ChevronRight,
-  Plus,
-  AlertCircle,
+  User, Phone, Activity, Edit3, Save, X, MapPin, Camera, Loader2,
+  Trash2, Pill, Users, Syringe, AlertTriangle, Heart, Mail, Calendar,
+  ChevronRight, Plus, AlertCircle, Bell, HeartPulse, ClipboardList
 } from "lucide-react";
 import MedicalProfileSection from "./MedicalProfileSection";
+import { bmiFromMetricKgCm } from "../digital-twin/digitalTwinUtils";
+import { useAuthContext } from "../../../providers/AuthProvider";
 
 const PatientProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic"); // "basic", "medical", "meds", "emergency"
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
+  const { user, updateUser } = useAuthContext();
+  const navigate = useNavigate();
+  const match = useMatch("/patient-dashboard/*");
+  const BASE = match ? "/patient-dashboard" : "/dashboard/patient";
 
   // Fetch Basic Info
-  const {
-    data: profile,
-    isLoading,
-    isError,
-  } = useQuery({
+  const { data: profile, isLoading, isError } = useQuery({
     queryKey: ["patientBasicInfo"],
     queryFn: patientService.getBasicInfo,
   });
@@ -51,12 +34,11 @@ const PatientProfilePage = () => {
     retry: 1,
   });
 
-  const { data: familyHistory = [], isLoading: familyHistoryLoading } =
-    useQuery({
-      queryKey: ["familyHistory"],
-      queryFn: patientService.getFamilyHistory,
-      retry: 1,
-    });
+  const { data: familyHistory = [], isLoading: familyHistoryLoading } = useQuery({
+    queryKey: ["familyHistory"],
+    queryFn: patientService.getFamilyHistory,
+    retry: 1,
+  });
 
   const { data: surgeries = [], isLoading: surgeriesLoading } = useQuery({
     queryKey: ["surgeries"],
@@ -70,34 +52,55 @@ const PatientProfilePage = () => {
     retry: 1,
   });
 
-  const { data: chronicDiseases = [], isLoading: chronicDiseasesLoading } =
-    useQuery({
-      queryKey: ["chronicDiseases"],
-      queryFn: patientService.getChronicDiseases,
-      retry: 1,
-    });
+  const { data: chronicDiseases = [], isLoading: chronicDiseasesLoading } = useQuery({
+    queryKey: ["chronicDiseases"],
+    queryFn: patientService.getChronicDiseases,
+    retry: 1,
+  });
 
-  const { data: emergencyContacts = [], isLoading: emergencyLoading } =
-    useQuery({
-      queryKey: ["emergencyContacts"],
-      queryFn: patientService.getEmergencyContacts,
-      retry: 1,
-    });
+  const { data: emergencyContacts = [], isLoading: emergencyLoading } = useQuery({
+    queryKey: ["emergencyContacts"],
+    queryFn: patientService.getEmergencyContacts,
+    retry: 1,
+  });
 
   // Update Basic Info Mutation
   const updateMutation = useMutation({
+    value: "updateBasicInfo",
     mutationFn: (newData) => patientService.updateBasicInfo(newData),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["patientBasicInfo"] });
+      if (res?.fullName || res?.data?.fullName) {
+        const name = res.fullName || res.data.fullName;
+        const [first = "", last = ""] = name.split(" ");
+        updateUser({
+          ...user,
+          firstName: first,
+          lastName: last,
+        });
+      }
       setIsEditing(false);
+      toast.success("Profile updated successfully!");
     },
   });
 
   // Profile Image Mutations
   const uploadImageMutation = useMutation({
     mutationFn: (file) => patientService.uploadProfileImage(file),
-    onSuccess: () => {
+    onSuccess: (imageUrl) => {
       queryClient.invalidateQueries({ queryKey: ["patientBasicInfo"] });
+      let extractedUrl = null;
+      if (typeof imageUrl === 'string') {
+        extractedUrl = imageUrl;
+      } else if (imageUrl && typeof imageUrl === 'object') {
+        extractedUrl = imageUrl?.imageUrl || imageUrl?.profileImage?.imageUrl || imageUrl?.data?.profileImage?.imageUrl;
+      }
+      if (extractedUrl) {
+        updateUser({
+          ...user,
+          profileImage: extractedUrl
+        });
+      }
     },
   });
 
@@ -105,70 +108,59 @@ const PatientProfilePage = () => {
     mutationFn: () => patientService.deleteProfileImage(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patientBasicInfo"] });
+      updateUser({
+        ...user,
+        profileImage: null
+      });
     },
   });
 
   // Emergency Contacts Mutations
   const addEmergencyMutation = useMutation({
     mutationFn: (data) => patientService.addEmergencyContact(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["emergencyContacts"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["emergencyContacts"] }),
   });
 
   const updateEmergencyMutation = useMutation({
-    mutationFn: ({ id, data }) =>
-      patientService.updateEmergencyContact({ id, contactData: data }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["emergencyContacts"] });
-    },
+    mutationFn: ({ id, data }) => patientService.updateEmergencyContact({ id, contactData: data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["emergencyContacts"] }),
   });
 
   const deleteEmergencyMutation = useMutation({
     mutationFn: (id) => patientService.deleteEmergencyContact(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["emergencyContacts"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["emergencyContacts"] }),
   });
 
   // Medications Mutations
   const addMedicationMutation = useMutation({
     mutationFn: (data) => patientService.addMedication(data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["medications"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["medications"] }),
   });
 
   const updateMedicationMutation = useMutation({
-    mutationFn: ({ id, data }) =>
-      patientService.updateMedication({ id, medicationData: data }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["medications"] }),
+    mutationFn: ({ id, data }) => patientService.updateMedication({ id, medicationData: data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["medications"] }),
   });
 
   const deleteMedicationMutation = useMutation({
     mutationFn: (id) => patientService.deleteMedication(id),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["medications"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["medications"] }),
   });
 
   // Family History Mutations
   const addFamilyHistoryMutation = useMutation({
     mutationFn: (data) => patientService.addFamilyHistory(data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["familyHistory"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["familyHistory"] }),
   });
 
   const updateFamilyHistoryMutation = useMutation({
-    mutationFn: ({ id, data }) =>
-      patientService.updateFamilyHistory({ id, historyData: data }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["familyHistory"] }),
+    mutationFn: ({ id, data }) => patientService.updateFamilyHistory({ id, historyData: data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["familyHistory"] }),
   });
 
   const deleteFamilyHistoryMutation = useMutation({
     mutationFn: (id) => patientService.deleteFamilyHistory(id),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["familyHistory"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["familyHistory"] }),
   });
 
   // Surgeries Mutations
@@ -178,8 +170,7 @@ const PatientProfilePage = () => {
   });
 
   const updateSurgeryMutation = useMutation({
-    mutationFn: ({ id, data }) =>
-      patientService.updateSurgery({ id, surgeryData: data }),
+    mutationFn: ({ id, data }) => patientService.updateSurgery({ id, surgeryData: data }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["surgeries"] }),
   });
 
@@ -195,8 +186,7 @@ const PatientProfilePage = () => {
   });
 
   const updateAllergyMutation = useMutation({
-    mutationFn: ({ id, data }) =>
-      patientService.updateAllergy({ id, allergyData: data }),
+    mutationFn: ({ id, data }) => patientService.updateAllergy({ id, allergyData: data }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allergies"] }),
   });
 
@@ -208,64 +198,53 @@ const PatientProfilePage = () => {
   // Chronic Diseases Mutations
   const addChronicDiseaseMutation = useMutation({
     mutationFn: (data) => patientService.addChronicDisease(data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["chronicDiseases"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chronicDiseases"] }),
   });
 
   const updateChronicDiseaseMutation = useMutation({
-    mutationFn: ({ id, data }) =>
-      patientService.updateChronicDisease({ id, diseaseData: data }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["chronicDiseases"] }),
+    mutationFn: ({ id, data }) => patientService.updateChronicDisease({ id, diseaseData: data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chronicDiseases"] }),
   });
 
   const deleteChronicDiseaseMutation = useMutation({
     mutationFn: (id) => patientService.deleteChronicDisease(id),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["chronicDiseases"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chronicDiseases"] }),
   });
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      uploadImageMutation.mutate(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be under 5MB");
+      return;
     }
+    uploadImageMutation.mutate(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleDeleteImage = (e) => {
     e.stopPropagation();
-    if (
-      window.confirm("Are you sure you want to remove your profile picture?")
-    ) {
+    if (window.confirm("Are you sure you want to remove your profile picture?")) {
       deleteImageMutation.mutate();
     }
   };
 
-  // Calculate Progress
+  // Calculate progress
   const calculateProgress = () => {
     if (!profile) return 0;
-
-    let filledFields = 0;
-    let totalFields = 15;
-
-    // Basic fields
-    if (profile.phone) filledFields++;
-    if (profile.height) filledFields++;
-    if (profile.weight) filledFields++;
-    if (profile.bloodType) filledFields++;
-    if (profile.maritalStatus) filledFields++;
-    if (profile.address?.city) filledFields++;
-    if (profile.address?.governorate) filledFields++;
-
-    // Medical sections
-    if (medications.length > 0) filledFields++;
-    if (familyHistory.length > 0) filledFields++;
-    if (surgeries.length > 0) filledFields++;
-    if (allergies.length > 0) filledFields++;
-    if (chronicDiseases.length > 0) filledFields++;
-    if (emergencyContacts.length > 0) filledFields++;
-
-    return Math.round((filledFields / totalFields) * 100);
+    let filled = 0;
+    const total = 10;
+    if (profile.phone) filled++;
+    if (profile.height) filled++;
+    if (profile.weight) filled++;
+    if (profile.bloodType) filled++;
+    if (profile.address?.city) filled++;
+    if (medications.length > 0) filled++;
+    if (allergies.length > 0) filled++;
+    if (surgeries.length > 0) filled++;
+    if (chronicDiseases.length > 0) filled++;
+    if (emergencyContacts.length > 0) filled++;
+    return Math.round((filled / total) * 100);
   };
 
   const progress = calculateProgress();
@@ -287,18 +266,15 @@ const PatientProfilePage = () => {
         street: formValues.street,
       },
     };
-
     updateMutation.mutate(patchPayload);
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-blue-600 font-semibold">
-            Loading your health profile...
-          </p>
+          <Loader2 className="animate-spin text-blue-600 mx-auto mb-4" size={32} />
+          <p className="text-blue-600 font-semibold text-sm">Loading your health profile...</p>
         </div>
       </div>
     );
@@ -306,18 +282,13 @@ const PatientProfilePage = () => {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-2xl shadow-xl">
-          <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">
-            Oops! Something went wrong
-          </h2>
-          <p className="text-gray-600">
-            Failed to load profile data. Please try again.
-          </p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-2xl border border-slate-100 shadow-sm max-w-sm">
+          <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-gray-800 mb-2">Something went wrong</h2>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors"
           >
             Retry
           </button>
@@ -326,630 +297,397 @@ const PatientProfilePage = () => {
     );
   }
 
-  const isActionPending =
-    uploadImageMutation.isPending || deleteImageMutation.isPending;
+  const isImagePending = uploadImageMutation.isPending || deleteImageMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-6 mb-8 hover:shadow-2xl transition-all duration-300">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
-            {/* Avatar Section */}
-            <div className="relative group">
-              <div className="relative">
-                <div
-                  className={`w-28 h-28 lg:w-32 lg:h-32 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 p-1 ${isActionPending ? "animate-pulse" : ""}`}
-                >
-                  <div className="w-full h-full rounded-full overflow-hidden border-4 border-white">
-                    <img
-                      src={
-                        profile?.profileImage?.imageUrl ||
-                        profile?.profileImage ||
-                        `https://ui-avatars.com/api/?name=${profile?.fullName}&background=0D8ABC&color=fff&bold=true`
-                      }
-                      alt={profile?.fullName}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
+    <div className="min-h-screen bg-[#F8FAFC] py-8 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-4xl mx-auto space-y-6">
+        
+        {/* ── Top Header Section (Minimal & Simple) ── */}
+        <div className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col md:flex-row items-center gap-6 justify-between shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            {/* Minimal Circular Progress Avatar */}
+            <div className="relative shrink-0 flex items-center justify-center">
+              <svg className="w-24 h-24 transform -rotate-90">
+                <circle cx="48" cy="48" r="42" stroke="#f1f5f9" strokeWidth="4" fill="transparent" />
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="42"
+                  stroke="#2563eb"
+                  strokeWidth="4"
+                  fill="transparent"
+                  strokeDasharray={2 * Math.PI * 42}
+                  strokeDashoffset={2 * Math.PI * 42 * (1 - progress / 100)}
+                  strokeLinecap="round"
+                  className="transition-all duration-500 ease-out"
+                />
+              </svg>
+              <div className="absolute w-[76px] h-[76px] rounded-full overflow-hidden border-2 border-white bg-slate-100 shadow-inner">
+                <img
+                  src={
+                    profile?.profileImage?.imageUrl ||
+                    profile?.profileImage ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.fullName || 'User')}&background=E0F2FE&color=0369A1&bold=true`
+                  }
+                  alt={profile?.fullName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <button
+                onClick={() => fileInputRef.current.click()}
+                className="absolute bottom-0.5 right-0.5 bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-full border-2 border-white shadow-sm transition-transform active:scale-95"
+                disabled={isImagePending}
+              >
+                {isImagePending ? <Loader2 size={10} className="animate-spin" /> : <Camera size={10} />}
+              </button>
+              {profile?.profileImage && !isImagePending && (
                 <button
-                  type="button"
-                  onClick={() => fileInputRef.current.click()}
-                  className="absolute bottom-1 right-1 bg-blue-600 text-white p-2.5 rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 border-4 border-white"
-                  disabled={isActionPending}
+                  onClick={handleDeleteImage}
+                  className="absolute top-0.5 right-0.5 bg-rose-500 hover:bg-rose-600 text-white p-1 rounded-full border border-white shadow-sm transition-transform active:scale-95"
                 >
-                  {isActionPending ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Camera size={16} />
-                  )}
+                  <Trash2 size={8} />
                 </button>
-                {profile?.profileImage && !isActionPending && (
+              )}
+              <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
+            </div>
+
+            {/* Basic Info */}
+            <div className="text-center sm:text-left space-y-1">
+              <h2 className="text-xl font-black text-slate-800 tracking-tight">{profile?.fullName}</h2>
+              <p className="text-xs font-semibold text-slate-400">
+                {profile?.age || 'N/A'} Years old • {profile?.gender} • Blood Type: <strong className="text-slate-600">{profile?.bloodType || 'Not set'}</strong>
+              </p>
+              <div className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border border-blue-100/50 mt-1">
+                {progress}% Completed
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            {!isEditing && activeTab === "basic" && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-100 active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Edit3 size={13} /> Edit Profile
+              </button>
+            )}
+            {isEditing && (
+              <button
+                onClick={() => setIsEditing(false)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2.5 rounded-2xl font-bold text-xs transition-all"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Tabs Navigation ── */}
+        <div className="flex border-b border-slate-100 gap-1 overflow-x-auto pb-px">
+          {[
+            { id: "basic", label: "Basic Info", icon: <User size={14} /> },
+            { id: "medical", label: "Medical History", icon: <HeartPulse size={14} /> },
+            { id: "meds", label: "Meds & Family", icon: <Pill size={14} /> },
+            { id: "emergency", label: "Emergency", icon: <Bell size={14} /> },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setIsEditing(false); }}
+              className={`flex items-center gap-1.5 px-4 py-3 text-xs font-bold border-b-2 transition-all shrink-0 ${
+                activeTab === tab.id
+                  ? "border-blue-600 text-blue-600 bg-blue-50/20"
+                  : "border-transparent text-slate-400 hover:text-slate-700 hover:bg-slate-50/50"
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Tabs Content ── */}
+        <div className="min-h-[300px]">
+          
+          {/* TAB 1: BASIC INFO */}
+          {activeTab === "basic" && (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Personal Information */}
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 space-y-4 shadow-sm">
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                    <User size={14} className="text-blue-500" /> Personal Info
+                  </h3>
+
+                  {isEditing ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Height (cm)</label>
+                          <input name="height" type="number" defaultValue={profile?.height} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-100 outline-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Weight (kg)</label>
+                          <input name="weight" type="number" step="0.1" defaultValue={profile?.weight} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-100 outline-none" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Blood Type</label>
+                          <select name="bloodType" defaultValue={profile?.bloodType} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-100 outline-none">
+                            <option value="">Select</option>
+                            {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Marital Status</label>
+                          <select name="maritalStatus" defaultValue={profile?.maritalStatus} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-100 outline-none">
+                            <option value="single">Single</option>
+                            <option value="married">Married</option>
+                            <option value="divorced">Divorced</option>
+                            <option value="widowed">Widowed</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-xs">
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Height</span>
+                        <strong className="text-slate-700">{profile?.height ? `${profile.height} cm` : 'Not set'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Weight</span>
+                        <strong className="text-slate-700">{profile?.weight ? `${profile.weight} kg` : 'Not set'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Marital Status</span>
+                        <strong className="text-slate-700 capitalize">{profile?.maritalStatus || 'Not specified'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">BMI Index</span>
+                        <strong className="text-slate-700">
+                          {bmiFromMetricKgCm(profile?.weight, profile?.height)?.toFixed(1) || 'Not set'}
+                        </strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Contact & Address */}
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 space-y-4 shadow-sm">
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                    <Mail size={14} className="text-orange-500" /> Contact Details
+                  </h3>
+
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Phone Number</label>
+                        <input name="phone" type="tel" defaultValue={profile?.phone} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-100 outline-none" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Governorate</label>
+                          <input name="governorate" defaultValue={profile?.address?.governorate} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-100 outline-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">City</label>
+                          <input name="city" defaultValue={profile?.address?.city} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-100 outline-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Street</label>
+                        <input name="street" defaultValue={profile?.address?.street} className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-100 outline-none" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 text-xs">
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Email</span>
+                        <strong className="text-slate-700 truncate block">{profile?.email}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Phone</span>
+                        <strong className="text-slate-700 block">{profile?.phone || 'Not set'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Address</span>
+                        <strong className="text-slate-700 block">
+                          {profile?.address?.city || profile?.address?.governorate
+                            ? `${profile.address.city || ''}, ${profile.address.governorate || ''}`
+                            : 'Not set'}
+                        </strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {isEditing && (
+                <div className="flex justify-center gap-3">
                   <button
-                    onClick={handleDeleteImage}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-all hover:scale-110"
-                    title="Remove profile picture"
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-100 active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50"
                   >
-                    <Trash2 size={14} />
+                    {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Save Changes
                   </button>
-                )}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  className="hidden"
-                  accept="image/*"
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-5 py-2.5 rounded-2xl font-bold text-xs active:scale-95 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </form>
+          )}
+
+          {/* TAB 2: MEDICAL HISTORY */}
+          {activeTab === "medical" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Allergies */}
+              <MedicalProfileSection
+                title="Known Allergies"
+                icon={AlertTriangle}
+                color="rose"
+                items={allergies}
+                isLoading={allergiesLoading}
+                onAdd={(data) => addAllergyMutation.mutateAsync(data)}
+                onUpdate={(data) => updateAllergyMutation.mutateAsync(data)}
+                onDelete={(id) => deleteAllergyMutation.mutate(id)}
+                fields={[
+                  { name: "allergen", label: "Allergy Name", required: true },
+                  {
+                    name: "reaction",
+                    label: "Reaction Type",
+                    type: "select",
+                    options: ["Rash", "Itching", "Anaphylaxis", "Difficulty breathing", "Other"],
+                  },
+                  {
+                    name: "severity",
+                    label: "Severity",
+                    type: "select",
+                    options: ["mild", "moderate", "severe"],
+                  },
+                ]}
+                emptyMessage="No allergies recorded"
+              />
+
+              {/* Surgeries */}
+              <MedicalProfileSection
+                title="Surgical History"
+                icon={Syringe}
+                color="purple"
+                items={surgeries}
+                isLoading={surgeriesLoading}
+                onAdd={(data) => addSurgeryMutation.mutateAsync(data)}
+                onUpdate={(data) => updateSurgeryMutation.mutateAsync(data)}
+                onDelete={(id) => deleteSurgeryMutation.mutate(id)}
+                fields={[
+                  { name: "nameOfSurgery", label: "Surgery Name", required: true },
+                  { name: "date", label: "Surgery Date", type: "date" },
+                  { name: "hospital", label: "Hospital/Clinic" },
+                  { name: "doctor", label: "Surgeon Name" },
+                ]}
+                emptyMessage="No surgeries recorded"
+              />
+
+              {/* Chronic Diseases */}
+              <div className="md:col-span-2">
+                <MedicalProfileSection
+                  title="Chronic Diseases"
+                  icon={Activity}
+                  color="amber"
+                  items={chronicDiseases}
+                  isLoading={chronicDiseasesLoading}
+                  onAdd={(data) => addChronicDiseaseMutation.mutateAsync(data)}
+                  onUpdate={(data) => updateChronicDiseaseMutation.mutateAsync(data)}
+                  onDelete={(id) => deleteChronicDiseaseMutation.mutate(id)}
+                  fields={[
+                    { name: "nameOfDisease", label: "Disease Name", required: true },
+                    { name: "type", label: "Disease Type" },
+                    { name: "since", label: "Year Diagnosed", type: "number" },
+                  ]}
+                  emptyMessage="No chronic diseases recorded"
                 />
               </div>
             </div>
+          )}
 
-            {/* Info Section */}
-            <div className="flex-1">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
-                    {profile?.fullName}
-                  </h1>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
-                      Health Profile
-                    </span>
-                    <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
-                      {profile?.age} Years • {profile?.gender}
-                    </span>
-                    {profile?.bloodType && (
-                      <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">
-                        {profile.bloodType} Blood Type
-                      </span>
-                    )}
-                  </div>
-                </div>
+          {/* TAB 3: MEDS & FAMILY */}
+          {activeTab === "meds" && (
+            <div className="grid grid-cols-1 gap-6">
+              {/* Medications */}
+              <MedicalProfileSection
+                title="Current Medications"
+                icon={Pill}
+                color="blue"
+                items={medications}
+                isLoading={medicationsLoading}
+                onAdd={(data) => addMedicationMutation.mutateAsync(data)}
+                onUpdate={(data) => updateMedicationMutation.mutateAsync(data)}
+                onDelete={(id) => deleteMedicationMutation.mutate(id)}
+                fields={[
+                  { name: "name", label: "Medication Name", required: true },
+                  { name: "reason", label: "Reason/Indication", type: "textarea" },
+                  { name: "dosage", label: "Dosage & Frequency" },
+                ]}
+                emptyMessage="No medications recorded"
+              />
 
-                {/* Edit Button */}
-                {!isEditing ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-xl active:scale-95 whitespace-nowrap"
-                  >
-                    <Edit3 size={18} /> Edit Profile
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    className="p-2.5 text-gray-400 hover:text-red-500 bg-gray-100 rounded-xl transition-colors hover:bg-red-50"
-                  >
-                    <X size={20} />
-                  </button>
-                )}
-              </div>
-
-              {/* Progress Bar */}
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm font-semibold text-gray-600">
-                    Profile Completion
-                  </p>
-                  <span className="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                    {progress}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-700 ease-out relative"
-                    style={{ width: `${progress}%` }}
-                  >
-                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {progress === 100
-                    ? "✨ Perfect! Your profile is complete"
-                    : `${Math.ceil(15 - progress / 6.67)} items remaining to complete your profile`}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Basic Info Form */}
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* Personal Info Card */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-                <div className="flex items-center gap-2 text-white">
-                  <User size={20} />
-                  <h3 className="font-bold">Personal Information</h3>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  <div className="pb-3 border-b border-gray-100">
-                    <label className="text-xs text-gray-500">Full Name</label>
-                    <p className="text-lg font-semibold text-gray-800">
-                      {profile?.fullName}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-gray-500">Age</label>
-                      <p className="font-semibold text-gray-800">
-                        {profile?.age} years
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Gender</label>
-                      <p className="font-semibold text-gray-800">
-                        {profile?.gender}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {isEditing ? (
-                      <>
-                        <div>
-                          <label className="text-xs text-gray-500">
-                            Weight (kg)
-                          </label>
-                          <input
-                            name="weight"
-                            type="number"
-                            step="0.1"
-                            defaultValue={profile?.weight}
-                            className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500">
-                            Height (cm)
-                          </label>
-                          <input
-                            name="height"
-                            type="number"
-                            step="0.1"
-                            defaultValue={profile?.height}
-                            className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <label className="text-xs text-gray-500">
-                            Weight
-                          </label>
-                          <p className="font-semibold text-gray-800">
-                            {profile?.weight
-                              ? `${profile.weight} kg`
-                              : "Not set"}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500">
-                            Height
-                          </label>
-                          <p className="font-semibold text-gray-800">
-                            {profile?.height
-                              ? `${profile.height} cm`
-                              : "Not set"}
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {isEditing ? (
-                    <div>
-                      <label className="text-xs text-gray-500">
-                        Blood Type
-                      </label>
-                      <select
-                        name="bloodType"
-                        defaultValue={profile?.bloodType}
-                        className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                      >
-                        <option value="">Select blood type</option>
-                        <option value="A+">A+</option>
-                        <option value="A-">A-</option>
-                        <option value="B+">B+</option>
-                        <option value="B-">B-</option>
-                        <option value="O+">O+</option>
-                        <option value="O-">O-</option>
-                        <option value="AB+">AB+</option>
-                        <option value="AB-">AB-</option>
-                      </select>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-xs text-gray-500">
-                        Blood Type
-                      </label>
-                      <p className="font-semibold text-gray-800">
-                        {profile?.bloodType || "Not set"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Contact & Address Card */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300">
-              <div className="bg-gradient-to-r from-orange-500 to-pink-500 px-6 py-4">
-                <div className="flex items-center gap-2 text-white">
-                  <Phone size={20} />
-                  <h3 className="font-bold">Contact & Address</h3>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  <div className="pb-3 border-b border-gray-100">
-                    <label className="text-xs text-gray-500">
-                      Email Address
-                    </label>
-                    <p className="text-gray-800 font-medium flex items-center gap-2">
-                      <Mail size={16} className="text-gray-400" />
-                      {profile?.email}
-                    </p>
-                  </div>
-
-                  {isEditing ? (
-                    <>
-                      <div>
-                        <label className="text-xs text-gray-500">
-                          Phone Number
-                        </label>
-                        <input
-                          name="phone"
-                          defaultValue={profile?.phone}
-                          className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs text-gray-500">
-                            Governorate
-                          </label>
-                          <input
-                            name="governorate"
-                            defaultValue={profile?.address?.governorate}
-                            className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500">City</label>
-                          <input
-                            name="city"
-                            defaultValue={profile?.address?.city}
-                            className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500">
-                          Street Details
-                        </label>
-                        <input
-                          name="street"
-                          defaultValue={profile?.address?.street}
-                          className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="text-xs text-gray-500">Phone</label>
-                        <p
-                          className={`font-medium flex items-center gap-2 ${!profile?.phone ? "text-orange-500" : "text-gray-800"}`}
-                        >
-                          <Phone size={16} className="text-gray-400" />
-                          {profile?.phone || "Not added yet"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500">Address</label>
-                        <p className="text-gray-800 font-medium flex items-start gap-2">
-                          <MapPin
-                            size={16}
-                            className="text-gray-400 mt-1 flex-shrink-0"
-                          />
-                          <span>
-                            {profile?.address?.city ||
-                            profile?.address?.governorate
-                              ? `${profile.address.city || ""}${profile.address.city && profile.address.governorate ? ", " : ""}${profile.address.governorate || ""}`
-                              : "Not specified"}
-                            {profile?.address?.street && (
-                              <span className="block text-sm text-gray-500 mt-1">
-                                {profile.address.street}
-                              </span>
-                            )}
-                          </span>
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Medical Overview Card */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300">
-              <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
-                <div className="flex items-center gap-2 text-white">
-                  <Activity size={20} />
-                  <h3 className="font-bold">Medical Overview</h3>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-blue-50 rounded-xl p-3">
-                    <Pill size={20} className="text-blue-600 mb-2" />
-                    <p className="text-2xl font-bold text-blue-600">
-                      {medications.length}
-                    </p>
-                    <p className="text-xs text-gray-600">Medications</p>
-                  </div>
-                  <div className="bg-red-50 rounded-xl p-3">
-                    <AlertTriangle size={20} className="text-red-600 mb-2" />
-                    <p className="text-2xl font-bold text-red-600">
-                      {allergies.length}
-                    </p>
-                    <p className="text-xs text-gray-600">Allergies</p>
-                  </div>
-                  <div className="bg-amber-50 rounded-xl p-3">
-                    <Activity size={20} className="text-amber-600 mb-2" />
-                    <p className="text-2xl font-bold text-amber-600">
-                      {chronicDiseases.length}
-                    </p>
-                    <p className="text-xs text-gray-600">Chronic Diseases</p>
-                  </div>
-                  <div className="bg-purple-50 rounded-xl p-3">
-                    <Heart size={20} className="text-purple-600 mb-2" />
-                    <p className="text-2xl font-bold text-purple-600">
-                      {emergencyContacts.length}
-                    </p>
-                    <p className="text-xs text-gray-600">Emergency Contacts</p>
-                  </div>
-                </div>
-
-                {isEditing ? (
-                  <div className="mt-4">
-                    <label className="text-xs text-gray-500">
-                      Marital Status
-                    </label>
-                    <select
-                      name="maritalStatus"
-                      defaultValue={profile?.maritalStatus}
-                      className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                    >
-                      <option value="single">Single</option>
-                      <option value="married">Married</option>
-                      <option value="divorced">Divorced</option>
-                      <option value="widowed">Widowed</option>
-                    </select>
-                  </div>
-                ) : (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <label className="text-xs text-gray-500">
-                      Marital Status
-                    </label>
-                    <p className="font-semibold text-gray-800">
-                      {profile?.maritalStatus
-                        ? profile.maritalStatus.charAt(0).toUpperCase() +
-                          profile.maritalStatus.slice(1)
-                        : "Not specified"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Save Button */}
-          {isEditing && (
-            <div className="mb-8 flex justify-center">
-              <button
-                type="submit"
-                disabled={updateMutation.isPending}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-12 py-4 rounded-xl font-bold shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-95 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-              >
-                {updateMutation.isPending ? (
-                  <>
-                    <Loader2 className="animate-spin" size={20} />
-                    Saving Changes...
-                  </>
-                ) : (
-                  <>
-                    <Save size={20} />
-                    Save All Changes
-                  </>
-                )}
-              </button>
+              {/* Family Medical History */}
+              <MedicalProfileSection
+                title="Family Medical History"
+                icon={Users}
+                color="emerald"
+                items={familyHistory}
+                isLoading={familyHistoryLoading}
+                onAdd={(data) => addFamilyHistoryMutation.mutateAsync(data)}
+                onUpdate={(data) => updateFamilyHistoryMutation.mutateAsync(data)}
+                onDelete={(id) => deleteFamilyHistoryMutation.mutate(id)}
+                fields={[
+                  { name: "nameOfFamilyMember", label: "Family Member Name", required: true },
+                  { name: "nameOfDisease", label: "Disease Name", required: true },
+                  { name: "age", label: "Age (at diagnosis)", type: "number" },
+                ]}
+                emptyMessage="No family medical history recorded"
+              />
             </div>
           )}
-        </form>
 
-        {/* Medical Profile Sections */}
-        <div className="space-y-8">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <HeartPulse size={24} className="text-blue-600" />
-            Medical Profile
-          </h2>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Medications */}
-            <MedicalProfileSection
-              title="Current Medications"
-              icon={Pill}
-              color="blue"
-              items={medications}
-              isLoading={medicationsLoading}
-              onAdd={(data) => addMedicationMutation.mutateAsync(data)}
-              onUpdate={(data) => updateMedicationMutation.mutateAsync(data)}
-              onDelete={(id) => deleteMedicationMutation.mutate(id)}
-              fields={[
-                { name: "name", label: "Medication Name", required: true },
-                {
-                  name: "reason",
-                  label: "Reason/Indication",
-                  type: "textarea",
-                },
-                { name: "dosage", label: "Dosage & Frequency" },
-              ]}
-              emptyMessage="No medications recorded"
+          {/* TAB 4: EMERGENCY */}
+          {activeTab === "emergency" && (
+            <EmergencyContactsSection
+              contacts={emergencyContacts}
+              isLoading={emergencyLoading}
+              onAdd={(data) => addEmergencyMutation.mutateAsync(data)}
+              onUpdate={(data) => updateEmergencyMutation.mutateAsync(data)}
+              onDelete={(id) => deleteEmergencyMutation.mutate(id)}
             />
+          )}
 
-            {/* Allergies */}
-            <MedicalProfileSection
-              title="Known Allergies"
-              icon={AlertTriangle}
-              color="rose"
-              items={allergies}
-              isLoading={allergiesLoading}
-              onAdd={(data) => addAllergyMutation.mutateAsync(data)}
-              onUpdate={(data) => updateAllergyMutation.mutateAsync(data)}
-              onDelete={(id) => deleteAllergyMutation.mutate(id)}
-              fields={[
-                {
-                  name: "allergen",
-                  label: "Allergy Name",
-                  required: true,
-                },
-                {
-                  name: "reaction",
-                  label: "Reaction Type",
-                  type: "select",
-                  options: [
-                    "Rash",
-                    "Itching",
-                    "Anaphylaxis",
-                    "Difficulty breathing",
-                    "Other",
-                  ],
-                },
-                {
-                  name: "severity",
-                  label: "Severity",
-                  type: "select",
-                  options: ["mild", "moderate", "severe"],
-                },
-              ]}
-              emptyMessage="No allergies recorded"
-            />
-
-            {/* Surgeries */}
-            <MedicalProfileSection
-              title="Surgical History"
-              icon={Syringe}
-              color="purple"
-              items={surgeries}
-              isLoading={surgeriesLoading}
-              onAdd={(data) => addSurgeryMutation.mutateAsync(data)}
-              onUpdate={(data) => updateSurgeryMutation.mutateAsync(data)}
-              onDelete={(id) => deleteSurgeryMutation.mutate(id)}
-              fields={[
-                {
-                  name: "nameOfSurgery",
-                  label: "Surgery Name",
-                  required: true,
-                },
-                { name: "date", label: "Surgery Date", type: "date" },
-                { name: "hospital", label: "Hospital/Clinic" },
-                { name: "doctor", label: "Surgeon Name" },
-              ]}
-              emptyMessage="No surgeries recorded"
-            />
-
-            {/* Chronic Diseases */}
-            <MedicalProfileSection
-              title="Chronic Diseases"
-              icon={Activity}
-              color="amber"
-              items={chronicDiseases}
-              isLoading={chronicDiseasesLoading}
-              onAdd={(data) => addChronicDiseaseMutation.mutateAsync(data)}
-              onUpdate={(data) =>
-                updateChronicDiseaseMutation.mutateAsync(data)
-              }
-              onDelete={(id) => deleteChronicDiseaseMutation.mutate(id)}
-              fields={[
-                {
-                  name: "nameOfDisease",
-                  label: "Disease Name",
-                  required: true,
-                },
-                { name: "type", label: "Disease Type" },
-                { name: "since", label: "Year Diagnosed", type: "number" },
-              ]}
-              emptyMessage="No chronic diseases recorded"
-            />
-          </div>
-
-          {/* Family History - Full Width */}
-          <div>
-            <MedicalProfileSection
-              title="Family Medical History"
-              icon={Users}
-              color="emerald"
-              items={familyHistory}
-              isLoading={familyHistoryLoading}
-              onAdd={(data) => addFamilyHistoryMutation.mutateAsync(data)}
-              onUpdate={(data) => updateFamilyHistoryMutation.mutateAsync(data)}
-              onDelete={(id) => deleteFamilyHistoryMutation.mutate(id)}
-              fields={[
-                {
-                  name: "nameOfFamilyMember",
-                  label: "Family Member Name",
-                  required: true,
-                },
-                {
-                  name: "nameOfDisease",
-                  label: "Disease Name",
-                  required: true,
-                },
-                {
-                  name: "age",
-                  label: "Age (at diagnosis/current)",
-                  type: "number",
-                },
-              ]}
-              emptyMessage="No family medical history recorded"
-            />
-          </div>
-
-          {/* Emergency Contacts Section */}
-          <EmergencyContactsSection
-            contacts={emergencyContacts}
-            isLoading={emergencyLoading}
-            onAdd={(data) => addEmergencyMutation.mutateAsync(data)}
-            onUpdate={(data) => updateEmergencyMutation.mutateAsync(data)}
-            onDelete={(id) => deleteEmergencyMutation.mutate(id)}
-          />
         </div>
+
       </div>
     </div>
   );
 };
 
 // Emergency Contacts Section Component
-const EmergencyContactsSection = ({
-  contacts,
-  isLoading,
-  onAdd,
-  onUpdate,
-  onDelete,
-}) => {
+const EmergencyContactsSection = ({ contacts = [], isLoading, onAdd, onUpdate, onDelete }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    phoneNumber: "",
-    relationship: "",
-  });
+  const [formData, setFormData] = useState({ name: "", phoneNumber: "", relationship: "" });
 
   const resetForm = () => {
     setFormData({ name: "", phoneNumber: "", relationship: "" });
@@ -968,7 +706,6 @@ const EmergencyContactsSection = ({
       alert("Please fill in all required fields");
       return;
     }
-
     try {
       if (editingId) {
         await onUpdate({ id: editingId, data: formData });
@@ -992,9 +729,7 @@ const EmergencyContactsSection = ({
   };
 
   const handleDelete = async (id) => {
-    if (
-      window.confirm("Are you sure you want to delete this emergency contact?")
-    ) {
+    if (window.confirm("Are you sure you want to delete this emergency contact?")) {
       try {
         await onDelete(id);
       } catch (error) {
@@ -1005,74 +740,41 @@ const EmergencyContactsSection = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <div className="animate-pulse">
-          <div className="h-7 bg-gray-200 rounded w-48 mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-20 bg-gray-100 rounded-lg"></div>
-            <div className="h-20 bg-gray-100 rounded-lg"></div>
-          </div>
-        </div>
+      <div className="bg-white rounded-3xl border border-slate-100 p-6 animate-pulse space-y-4">
+        <div className="h-4 bg-slate-100 rounded w-1/4"></div>
+        <div className="h-12 bg-slate-50 rounded-2xl"></div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300">
-      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white">
-            <Heart size={20} />
-            <h3 className="font-bold">Emergency Contacts</h3>
-          </div>
-          <span className="bg-white/20 text-white px-3 py-1 rounded-full text-xs font-semibold">
-            {contacts.length} {contacts.length === 1 ? "Contact" : "Contacts"}
-          </span>
-        </div>
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+        <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+          <Heart size={16} className="text-emerald-500" /> Emergency Contacts
+        </h3>
+        <span className="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+          {contacts.length} Contact(s)
+        </span>
       </div>
 
       <div className="p-6">
-        {/* Contacts List */}
         {contacts.length > 0 && (
           <div className="space-y-3 mb-6">
             {contacts.map((contact) => (
-              <div
-                key={contact._id}
-                className="group bg-gradient-to-r from-emerald-50 to-transparent p-4 rounded-xl border border-emerald-100 hover:shadow-md transition-all"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-gray-800">
-                        {contact.name}
-                      </span>
-                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                        {contact.relationship}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-emerald-600">
-                      <Phone size={14} />
-                      <span className="text-sm font-medium">
-                        {contact.phoneNumber}
-                      </span>
-                    </div>
+              <div key={contact._id} className="group bg-slate-50/50 hover:bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between transition-colors">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-slate-700 text-xs">{contact.name}</span>
+                    <span className="text-[9px] bg-emerald-50 border border-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-md font-bold">
+                      {contact.relationship}
+                    </span>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleEdit(contact)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Edit"
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(contact._id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold">{contact.phoneNumber}</p>
+                </div>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => handleEdit(contact)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit3 size={13} /></button>
+                  <button onClick={() => handleDelete(contact._id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={13} /></button>
                 </div>
               </div>
             ))}
@@ -1080,130 +782,75 @@ const EmergencyContactsSection = ({
         )}
 
         {contacts.length === 0 && !isAdding && (
-          <div className="mb-6 p-6 bg-amber-50 border-2 border-amber-200 rounded-xl text-center">
-            <AlertCircle size={40} className="text-amber-500 mx-auto mb-3" />
-            <h4 className="font-semibold text-amber-800 mb-1">
-              No Emergency Contacts
-            </h4>
-            <p className="text-sm text-amber-600 mb-4">
-              Add emergency contacts for your safety
-            </p>
+          <div className="mb-6 p-6 bg-slate-50 border border-slate-100 rounded-2xl text-center">
+            <p className="text-xs text-slate-400">No emergency contacts set yet.</p>
           </div>
         )}
 
-        {/* Add/Edit Form */}
         {isAdding && (
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4 mb-6 p-4 bg-blue-50 rounded-xl border-2 border-blue-200"
-          >
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="Emergency contact name"
-                className="w-full p-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Full Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Contact name"
+                  className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-blue-100 outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Phone Number *</label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  placeholder="Phone number"
+                  className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-blue-100 outline-none"
+                  required
+                />
+              </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                placeholder="Emergency contact phone"
-                className="w-full p-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                Relationship
-              </label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 block">Relationship</label>
               <select
                 name="relationship"
                 value={formData.relationship}
                 onChange={handleInputChange}
-                className="w-full p-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-blue-100 outline-none"
               >
                 <option value="">Select relationship</option>
-                <option value="Mother">Mother</option>
-                <option value="Father">Father</option>
-                <option value="Spouse">Spouse</option>
-                <option value="Sibling">Sibling</option>
-                <option value="Child">Child</option>
-                <option value="Friend">Friend</option>
-                <option value="Other">Other</option>
+                {["Mother", "Father", "Spouse", "Sibling", "Child", "Friend", "Other"].map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
               </select>
             </div>
-            <div className="flex gap-2 pt-2">
-              <button
-                type="submit"
-                className="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Save size={16} />
-                {editingId ? "Update Contact" : "Add Contact"}
+            <div className="flex gap-2">
+              <button type="submit" className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors text-xs flex items-center justify-center gap-1.5">
+                <Save size={14} /> {editingId ? "Update Contact" : "Add Contact"}
               </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <X size={16} />
+              <button type="button" onClick={resetForm} className="px-4 py-2.5 border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors text-xs font-bold text-slate-600">
+                Cancel
               </button>
             </div>
           </form>
         )}
 
-        {/* Add Button */}
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-50 border-2 border-dashed border-emerald-300 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-all font-semibold group"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-dashed border-slate-250 text-emerald-600 hover:text-emerald-700 hover:bg-slate-50 rounded-2xl transition-colors font-bold text-xs"
           >
-            <Plus
-              size={18}
-              className="group-hover:scale-110 transition-transform"
-            />
-            Add Emergency Contact
+            <Plus size={14} /> Add Emergency Contact
           </button>
         )}
       </div>
     </div>
   );
 };
-
-// Helper Components
-const InfoField = ({ label, value, readOnly, isMissing }) => (
-  <div className="mb-1">
-    <label className="text-xs text-gray-500">{label}</label>
-    <p
-      className={`font-medium ${readOnly ? "text-gray-400" : isMissing ? "text-orange-500" : "text-gray-800"}`}
-    >
-      {value || "N/A"}
-    </p>
-  </div>
-);
-
-const EditField = ({ label, name, defaultValue, type = "text" }) => (
-  <div className="mb-1">
-    <label className="text-xs text-gray-500">{label}</label>
-    <input
-      name={name}
-      type={type}
-      defaultValue={defaultValue}
-      className="w-full mt-1 p-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-    />
-  </div>
-);
 
 export default PatientProfilePage;

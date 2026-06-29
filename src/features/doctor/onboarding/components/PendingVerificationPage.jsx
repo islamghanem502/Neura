@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getProfile } from '../../../../api/authService';
+import { useAuthContext } from '../../../../providers/AuthProvider';
 import { FileText, Clock, HelpCircle, Mail, CheckCircle2, Shield, MoreHorizontal, FileBadge } from 'lucide-react';
 
 export const PendingVerificationPage = () => {
@@ -23,13 +24,15 @@ export const PendingVerificationPage = () => {
     refetchInterval: 10000,
   });
 
+  const { updateUser } = useAuthContext();
   const user = profileRes?.data?.user || profileRes?.user;
 
   useEffect(() => {
     if (user?.isActive === true || user?.isVerified === true) {
+      updateUser(user);
       navigate('/dashboard/doctor', { replace: true });
     }
-  }, [user?.isActive, user?.isVerified, navigate]);
+  }, [user, updateUser, navigate]);
 
   return (
     <div className="min-h-screen bg-[#F7F9FC] flex justify-center p-6 md:p-12 font-sans">

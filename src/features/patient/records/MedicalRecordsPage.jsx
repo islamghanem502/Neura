@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuthContext } from '../../../providers/AuthProvider';
-import { useQuery } from '@tanstack/react-query';
 import { 
   ClipboardList, Search, Loader2, AlertCircle, Calendar, 
   MapPin, User, Stethoscope, Activity, Pill, HeartPulse, 
@@ -8,7 +7,7 @@ import {
   AlertTriangle, FlaskConical, Watch, Sparkles, Share2, Copy, Check
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getMyMedicalRecords } from '../../../api/medicalRecordService';
+import { useMyMedicalRecords } from '../../../hooks/useMedicalRecords';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
@@ -275,12 +274,13 @@ export default function MedicalRecordsPage() {
   const { user } = useAuthContext();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['medicalRecords'],
-    queryFn: () => getMyMedicalRecords({ page: 1, limit: 50 }),
-  });
+  const { data, isLoading, error } = useMyMedicalRecords({ page: 1, limit: 50 });
 
-  const records = data?.data || [];
+  // Robust data normalization to handle different API shapes and fallback mock structure
+  const records = data?.data?.records 
+    || data?.data?.medicalRecords 
+    || (Array.isArray(data?.data) ? data.data : [])
+    || [];
 
   const filteredRecords = records.filter(record => {
     const searchString = searchTerm.toLowerCase();

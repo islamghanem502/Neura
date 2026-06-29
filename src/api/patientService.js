@@ -15,17 +15,14 @@ export const patientService = {
   // --- Profile Image ---
   uploadProfileImage: async (imageFile) => {
     const formData = new FormData();
-    // تأكد إن السيرفر مستني كلمة 'file' مش 'image'
-    formData.append('file', imageFile); 
+    formData.append('image', imageFile); 
 
-    const { data } = await axiosInstance.post('/patients/me/profile-image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return data?.data?.profileImage?.imageUrl || data?.profileImage || data;
+    const { data } = await axiosInstance.post('/profile/profile-image', formData);
+    return data?.data?.profileImage?.imageUrl || data?.profileImage?.imageUrl || data?.profileImage || data;
   },
 
   deleteProfileImage: async () => {
-    const { data } = await axiosInstance.delete('/patients/me/profile-image');
+    const { data } = await axiosInstance.delete('/profile/profile-image');
     return data;
   },
 
@@ -249,5 +246,16 @@ export const patientService = {
   deleteChronicDisease: async (id) => {
     const { data } = await axiosInstance.delete(`/patients/me/medical-profile/chronic-diseases/${id}`);
     return data;
-  }
+  },
+
+  // --- Doctor-side: View a specific patient by ID ---
+  getPatientById: async (patientId) => {
+    const { data } = await axiosInstance.get(`/patients/${patientId}`);
+    return data;
+  },
+
+  getPatientMedicalProfileById: async (patientId) => {
+    const { data } = await axiosInstance.get(`/patients/${patientId}/medical-profile`);
+    return data;
+  },
 };

@@ -32,6 +32,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((newUserData) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(newUserData));
+    setUser(newUserData);
+  }, []);
+
   const value = {
     token,
     user,
@@ -39,6 +44,7 @@ export function AuthProvider({ children }) {
     role: user?.role ?? null,
     login,
     logout,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

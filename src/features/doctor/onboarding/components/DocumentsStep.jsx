@@ -71,29 +71,10 @@ export const DocumentsStep = ({ doctorData, docMeta, setDocMeta, onNext, onPrev 
 
   const verificationChecklist = [
     {
-      key: 'nationalIdFront',
-      label: 'National ID (Front)',
-      status: reqDocs.nationalId?.front?.status || reqDocs.nationalIdFront?.status,
-      description: 'Upload a clear photo of the front side of your National ID card',
-    },
-    {
-      key: 'nationalIdBack',
-      label: 'National ID (Back)',
-      status: reqDocs.nationalId?.back?.status || reqDocs.nationalIdBack?.status,
-      description: 'Upload a clear photo of the back side of your National ID card',
-    },
-    {
       key: 'medicalLicense',
       label: 'Medical License',
       status: reqDocs.medicalLicense?.status,
       description: 'Upload your valid medical license document',
-      requiresMeta: true,
-    },
-    {
-      key: 'syndicateCard',
-      label: 'Syndicate Card',
-      status: reqDocs.syndicateCard?.status,
-      description: 'Upload your syndicate card with registration details',
       requiresMeta: true,
     },
   ];
@@ -101,36 +82,11 @@ export const DocumentsStep = ({ doctorData, docMeta, setDocMeta, onNext, onPrev 
   const plainInputClass = 'w-full bg-[#f4f4f5] text-slate-700 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-[13px] font-medium placeholder:text-slate-400 border-none';
 
   const renderDocMetaFields = (doc) => {
-    if (doc.key === 'syndicateCard') {
+    if (doc.key === 'medicalLicense') {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-             <label className="text-[10px] font-bold text-slate-800 mb-2 block uppercase tracking-wider opacity-60">Syndicate Number</label>
-             <input
-               placeholder="e.g. 12345/67"
-               className={plainInputClass}
-               value={docMeta.syndicateCard?.syndicateNumber || ''}
-               onChange={(e) => handleDocMetaChange(doc.key, 'syndicateNumber', e.target.value)}
-             />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-800 mb-2 block uppercase tracking-wider opacity-60">
-              Issue Date
-            </label>
-            <input
-              type="date"
-              className={plainInputClass}
-              value={docMeta.syndicateCard?.issueDate || ''}
-              onChange={(e) => handleDocMetaChange(doc.key, 'issueDate', e.target.value)}
-            />
-          </div>
-        </div>
-      );
-    } else if (doc.key === 'medicalLicense') {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
-             <label className="text-[10px] font-bold text-slate-800 mb-2 block uppercase tracking-wider opacity-60">License Number</label>
+             <label className="text-[11px] font-bold text-slate-800 mb-2 block uppercase tracking-wider opacity-80">License Number</label>
              <input
                placeholder="e.g. 5894869"
                className={plainInputClass}
@@ -139,7 +95,7 @@ export const DocumentsStep = ({ doctorData, docMeta, setDocMeta, onNext, onPrev 
              />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-800 mb-2 block uppercase tracking-wider opacity-60">
+            <label className="text-[11px] font-bold text-slate-800 mb-2 block uppercase tracking-wider opacity-80">
               Issue Date
             </label>
             <input
@@ -150,7 +106,7 @@ export const DocumentsStep = ({ doctorData, docMeta, setDocMeta, onNext, onPrev 
             />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-800 mb-2 block uppercase tracking-wider opacity-60">
+            <label className="text-[11px] font-bold text-slate-800 mb-2 block uppercase tracking-wider opacity-80">
               Expiry Date
             </label>
             <input
@@ -166,6 +122,8 @@ export const DocumentsStep = ({ doctorData, docMeta, setDocMeta, onNext, onPrev 
     return null;
   };
 
+  const labelClass = 'text-[11px] font-bold text-slate-800 mb-2.5 block uppercase tracking-widest opacity-80';
+
   const renderDocumentCard = (doc) => {
     const isUploaded = doc.status === 'uploaded' || doc.status === 'pending' || doc.status === 'verified';
     const isUploading = isCurrentlyUploading(doc.key);
@@ -173,71 +131,70 @@ export const DocumentsStep = ({ doctorData, docMeta, setDocMeta, onNext, onPrev 
 
     let canUpload = true;
     if (doc.requiresMeta) {
-       if (doc.key === 'syndicateCard') {
-          canUpload = !!(docMeta.syndicateCard?.syndicateNumber && docMeta.syndicateCard?.issueDate);
-       } else if (doc.key === 'medicalLicense') {
+       if (doc.key === 'medicalLicense') {
           canUpload = !!(docMeta.medicalLicense?.licenseNumber && docMeta.medicalLicense?.issueDate && docMeta.medicalLicense?.expiryDate);
        }
     }
 
-    const cardBgClass = isUploaded ? 'bg-emerald-50/30 border-emerald-500' : 'bg-white border-slate-100 hover:border-blue-100';
-
     return (
-      <div key={doc.key} className={`${cardBgClass} border rounded-[24px] p-6 shadow-sm transition-all group`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-5">
-            <div className={`w-12 h-12 rounded-[14px] flex items-center justify-center transition-colors ${isUploaded ? 'bg-emerald-50 text-emerald-500' : isUploading ? 'bg-blue-50 text-blue-500 border border-blue-100' : 'bg-[#f4f4f5] text-slate-400'}`}>
-              {isUploading ? <Loader2 size={20} className="animate-spin" /> : isUploaded ? <CheckCircle2 size={22} /> : <FileText size={20} />}
-            </div>
-            <div>
-              <h4 className="text-[15px] font-bold text-slate-900">{doc.label}</h4>
-              <p className="text-[11px] text-slate-400 font-medium mt-0.5">{doc.description}</p>
-            </div>
-          </div>
-
-          {!isUploaded ? (
-            <label 
-               className={`cursor-pointer px-6 py-2.5 rounded-full text-[12px] font-bold shadow-sm transition-all flex items-center gap-2 
-               ${!canUpload ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white'}
-               ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-               onClick={(e) => {
-                  if (!canUpload) {
-                     e.preventDefault();
-                     toast.error('Please fill the required details below before uploading');
-                  }
-               }}
-            >
-              {isUploading ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}
-              <span>{isUploading ? 'UPLOADING...' : 'UPLOAD'}</span>
-              <input
-                type="file"
-                className="hidden"
-                disabled={uploadDocMutation.isPending || !canUpload}
-                accept="image/*,.pdf"
-                onChange={(e) => handleFileUpload(e, doc.key)}
-              />
-            </label>
-          ) : (
-            <div className="flex flex-col items-center gap-1.5 bg-emerald-50/80 border border-emerald-100 px-5 py-2.5 rounded-2xl">
-               <div className="flex items-center gap-2 text-emerald-600">
-                  <CheckCircle2 size={16} className="fill-emerald-100" />
-                  <span className="text-[12px] font-bold uppercase tracking-wider">{doc.status?.replace('_', ' ')}</span>
-               </div>
-               <span className="text-[10px] text-emerald-500 font-medium">({doc.label})</span>
-            </div>
-          )}
+      <div key={doc.key} className="bg-white rounded-[40px] p-10 md:p-14 shadow-sm border border-slate-100 space-y-10">
+        <div>
+          <h3 className="text-[20px] font-bold text-slate-900 mb-2">{doc.label}</h3>
+          <p className="text-[13px] text-slate-400 font-medium">{doc.description}</p>
         </div>
 
         {showMetaInCard && (
-          <div className="mt-4 pt-6 border-t border-slate-50">
-             <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-50">
-                <p className="text-[11px] text-blue-600 font-bold flex items-center gap-2 mb-1">
-                   <AlertCircle size={12} />
-                   Action Required
-                </p>
-                <p className="text-[10px] text-blue-400 font-semibold mb-4">Please fill the details below before uploading.</p>
-                {renderDocMetaFields(doc)}
-             </div>
+           <div className="bg-blue-50/50 rounded-3xl p-8 border border-blue-50">
+              <p className="text-[13px] text-blue-600 font-bold flex items-center gap-2 mb-2">
+                 <AlertCircle size={16} />
+                 Action Required
+              </p>
+              <p className="text-[12px] text-blue-400 font-semibold mb-6">Please fill the details below before uploading.</p>
+              {renderDocMetaFields(doc)}
+           </div>
+        )}
+
+        {!isUploaded ? (
+          <div>
+            <label className={labelClass}>Upload {doc.label}</label>
+            <div className={`border-2 border-dashed rounded-[32px] p-16 flex flex-col items-center justify-center text-center transition-all bg-white relative ${!canUpload ? 'border-slate-100 bg-slate-50/50 opacity-60' : 'border-slate-100 hover:border-blue-200'}`}>
+               {!canUpload && (
+                 <div className="absolute inset-0 z-10 cursor-not-allowed" onClick={(e) => {
+                   e.preventDefault();
+                   toast.error('Please fill the required details above before uploading');
+                 }}></div>
+               )}
+               <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-8">
+                 {isUploading ? <Loader2 size={32} className="animate-spin" /> : <CloudUpload size={32} />}
+               </div>
+               <h4 className="text-[18px] font-bold text-slate-900 mb-2">Drag and drop your {doc.label.toLowerCase()} here</h4>
+               <p className="text-[13px] font-medium text-slate-400 mb-12">PDF, PNG or JPG (Max 10MB per file)</p>
+               
+               <label className={`cursor-pointer bg-white border border-slate-200 text-blue-600 hover:bg-slate-50 px-12 py-3.5 rounded-full text-[15px] font-bold shadow-sm transition-all active:scale-95 ${!canUpload ? 'pointer-events-none' : ''}`}>
+                 {isUploading ? 'UPLOADING...' : 'Browse Files'}
+                 <input
+                   type="file"
+                   className="hidden"
+                   disabled={uploadDocMutation.isPending || !canUpload}
+                   accept="image/*,.pdf"
+                   onChange={(e) => handleFileUpload(e, doc.key)}
+                 />
+               </label>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className={labelClass}>Upload {doc.label}</label>
+            <div className="border-2 border-dashed border-emerald-200 bg-emerald-50/30 rounded-[32px] p-16 flex flex-col items-center justify-center text-center transition-all">
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle2 size={32} />
+              </div>
+              <h4 className="text-[18px] font-bold text-slate-900 mb-2">Document Uploaded Successfully</h4>
+              <div className="flex items-center gap-2 mt-4 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-[12px] font-bold uppercase tracking-wider">
+                 <CheckCircle2 size={16} />
+                 {doc.status?.replace('_', ' ')}
+              </div>
+            </div>
           </div>
         )}
       </div>

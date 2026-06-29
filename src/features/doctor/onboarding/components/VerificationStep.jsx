@@ -7,17 +7,38 @@ import { User, ShieldCheck, GraduationCap, FileText, CheckCircle2, ChevronRight,
 export const VerificationStep = ({ doctorData, docMeta, onPrev, onSubmitted }) => {
   const submitDoctorProfileMutation = useSubmitDoctorProfile();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const navigate = useNavigate();
 
   const handleCheck = () => {
-    if (doctorData?.isVerified) {
+    if (doctorData?.isVerified || doctorData?.isActive) {
       toast.success('Your profile is verified!');
-      // Assuming the dashboard route is /dashboard or /doctor/dashboard. Let's use /doctor/dashboard or similar.
-      // Usually, if there's a global redirect, we can go to /
-      navigate('/');
+      navigate('/dashboard/doctor');
     } else {
       toast.error('Your profile is still under review.');
     }
+  };
+
+  const handleVerifySubmit = () => {
+    if (!agreed) {
+      toast.error('You must agree to the Professional Clinician Terms of Service and Privacy Policy.');
+      return;
+    }
+    submitDoctorProfileMutation.mutate(undefined, {
+      onSuccess: () => {
+        setIsSubmitted(true);
+        onSubmitted();
+      },
+      onError: (err) => {
+        const msg = err.response?.data?.message || err.message || '';
+        if (msg.toLowerCase().includes('already submitted')) {
+          setIsSubmitted(true);
+          onSubmitted();
+        } else {
+          toast.error(msg || 'Failed to submit profile for review');
+        }
+      }
+    });
   };
 
   if (isSubmitted) {
@@ -187,21 +208,32 @@ export const VerificationStep = ({ doctorData, docMeta, onPrev, onSubmitted }) =
                By clicking 'Submit for Verification', you certify that all information provided is accurate and truthful. Our clinical review board will process your credentials within 24-48 business hours. You will be notified via email once your account is active.
              </p>
              <div className="flex items-center gap-3">
-               <input type="checkbox" className="w-5 h-5 rounded-[4px] border-white/20 bg-white/10 accent-blue-500 cursor-pointer" />
+               <input 
+                 type="checkbox" 
+                 checked={agreed}
+                 onChange={(e) => setAgreed(e.target.checked)}
+                 className="w-5 h-5 rounded-[4px] border-white/20 bg-white/10 accent-blue-500 cursor-pointer" 
+               />
                <span className="text-[12px] text-blue-100">I agree to the Professional Clinician Terms of Service and Privacy Policy.</span>
              </div>
            </div>
            
            <div className="flex flex-col gap-4 w-full md:w-[280px] shrink-0">
              <button 
-                onClick={() => onSubmitted()}
-                className="w-full bg-white text-[#1E3A8A] py-4 rounded-full font-bold text-[16px] shadow-lg flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-95"
+                onClick={handleVerifySubmit}
+                disabled={submitDoctorProfileMutation.isPending}
+                className="w-full bg-white text-[#1E3A8A] py-4 rounded-full font-bold text-[16px] shadow-lg flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-60"
              >
-                Submit for Verification <Send size={18} />
+                {submitDoctorProfileMutation.isPending ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <>Submit for Verification <Send size={18} /></>
+                )}
              </button>
              <button 
-                onClick={() => onSubmitted()}
-                className="w-full bg-white/10 border border-white/20 text-white py-4 rounded-full font-semibold text-[16px] hover:bg-white/20 transition-all"
+                onClick={handleVerifySubmit}
+                disabled={submitDoctorProfileMutation.isPending}
+                className="w-full bg-white/10 border border-white/20 text-white py-4 rounded-full font-semibold text-[16px] hover:bg-white/20 transition-all disabled:opacity-60"
              >
                Save as Draft
              </button>

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { useUploadDoctorDocument } from '../../../../hooks/useDoctorData';
+import { useUploadDoctorDocument, useUpdateDoctorProfessionalInfo } from '../../../../hooks/useDoctorData';
 import { ArrowLeft, ArrowRight, ShieldCheck, CloudUpload, Loader2, CheckCircle2 } from 'lucide-react';
 
 export const CredentialsStep = ({ docMeta, setDocMeta, onNext, onPrev }) => {
   const uploadDocMutation = useUploadDoctorDocument();
+  const updateProfessionalInfo = useUpdateDoctorProfessionalInfo();
   const [selectedFile, setSelectedFile] = useState(null);
+  const [primarySpecialization, setPrimarySpecialization] = useState('');
 
   const [errors, setErrors] = useState({});
   const currentYear = new Date().getFullYear();
@@ -26,6 +28,10 @@ export const CredentialsStep = ({ docMeta, setDocMeta, onNext, onPrev }) => {
     const newErrors = {};
     const meta = docMeta.medicalDegree || {};
 
+    if (!primarySpecialization.trim()) {
+      newErrors.primarySpecialization = 'Primary Specialization is required';
+      isValid = false;
+    }
     if (!meta.university?.trim()) {
       newErrors.university = 'University is required';
       isValid = false;
@@ -58,21 +64,32 @@ export const CredentialsStep = ({ docMeta, setDocMeta, onNext, onPrev }) => {
 
     const { university, graduationYear, degree } = docMeta.medicalDegree;
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('university', university);
-    formData.append('graduationYear', graduationYear);
-    formData.append('degree', degree);
-
-    uploadDocMutation.mutate(
-      { documentType: 'medical-degree', formData },
+    // Step 1: Save specialization via PATCH professional-info
+    updateProfessionalInfo.mutate(
+      { primarySpecialization: primarySpecialization.trim() },
       {
         onSuccess: () => {
-          onNext(3);
+          // Step 2: Upload medical degree document
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+          formData.append('university', university);
+          formData.append('graduationYear', graduationYear);
+          formData.append('degree', degree);
+
+          uploadDocMutation.mutate(
+            { documentType: 'medical-degree', formData },
+            {
+              onSuccess: () => {
+                onNext(3);
+              },
+            }
+          );
         },
       }
     );
   };
+
+  const isPending = updateProfessionalInfo.isPending || uploadDocMutation.isPending;
 
   const degreeOptions = [
     { value: '', label: 'Select Degree' },
@@ -100,7 +117,26 @@ export const CredentialsStep = ({ docMeta, setDocMeta, onNext, onPrev }) => {
       <div className="flex-1">
         {/* Main White Card Container */}
         <div className="bg-white rounded-[40px] p-10 md:p-14 shadow-sm border border-slate-100 space-y-10">
-          
+
+          {/* Primary Specialization — required, calls PATCH professional-info */}
+          <div>
+            <label className={labelClass}>
+              Primary Specialization <span className="text-red-500 normal-case tracking-normal font-bold">*</span>
+            </label>
+            <input
+              className={inputClass(errors.primarySpecialization)}
+              placeholder="e.g. Cardiology, Neurology, Orthopedics..."
+              value={primarySpecialization}
+              onChange={(e) => {
+                setPrimarySpecialization(e.target.value);
+                setErrors((prev) => ({ ...prev, primarySpecialization: null }));
+              }}
+            />
+            {errors.primarySpecialization && (
+              <span className="text-red-500 text-[11px] font-medium mt-3 block">{errors.primarySpecialization}</span>
+            )}
+          </div>
+
           <div>
             <label className={labelClass}>University / Medical School</label>
             <input
@@ -177,7 +213,7 @@ export const CredentialsStep = ({ docMeta, setDocMeta, onNext, onPrev }) => {
             type="button"
             onClick={() => onPrev(1)}
             className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-2 transition-all text-[16px] disabled:opacity-50"
-            disabled={uploadDocMutation.isPending}
+            disabled={isPending}
           >
             <ArrowLeft size={20} /> Previous Step
           </button>
@@ -185,11 +221,11 @@ export const CredentialsStep = ({ docMeta, setDocMeta, onNext, onPrev }) => {
           <button
             type="button"
             onClick={handleNext}
-            disabled={uploadDocMutation.isPending}
+            disabled={isPending}
             className="bg-blue-600 hover:bg-blue-700 text-white px-14 py-4.5 rounded-full font-bold text-[16px] shadow-2xl shadow-blue-200 flex items-center gap-3 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {uploadDocMutation.isPending ? <Loader2 size={24} className="animate-spin" /> : 'Save and Continue'} 
-            {!uploadDocMutation.isPending && <ArrowRight size={24} />}
+            {isPending ? <Loader2 size={24} className="animate-spin" /> : 'Save and Continue'} 
+            {!isPending && <ArrowRight size={24} />}
           </button>
         </div>
       </div>

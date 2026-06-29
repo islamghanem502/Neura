@@ -1,234 +1,529 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
-  Heart, Calendar, Pill,
-  Activity, Moon, Footprints,
-  ChevronRight, Plus, Zap, Stethoscope
+  Heart, Calendar, Pill, Activity, ChevronRight, Plus, Zap,
+  Stethoscope, Loader2, AlertCircle, Clock, MapPin, Video,
+  User, HeartPulse, Droplets, Ruler, Weight, Shield, ArrowUpRight,
+  BadgeCheck, PhoneCall, Building2, FileText,
 } from 'lucide-react';
 import { useAuthContext } from '../../../providers/AuthProvider';
+import { patientService } from '../../../api/patientService';
+import { getMyAppointments } from '../../../api/appointmentService';
+import { bmiFromMetricKgCm } from '../digital-twin/digitalTwinUtils';
 
-export default function PatientDashboard() {
-  const { user } = useAuthContext();
+// ─── helpers ────────────────────────────────────────────────────────
+const greet = () => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+};
+
+const fmtDate = (iso) => {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+};
+
+const statusColor = (s) => ({
+  confirmed: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  pending: 'bg-amber-50 text-amber-700 border-amber-100',
+  completed: 'bg-blue-50 text-blue-600 border-blue-100',
+  cancelled: 'bg-rose-50 text-rose-700 border-rose-100',
+  inProgress: 'bg-purple-50 text-purple-700 border-purple-100',
+}[s] || 'bg-slate-50 text-slate-500 border-slate-100');
+
+const bmiLabel = (bmi) => {
+  if (!bmi) return null;
+  if (bmi < 18.5) return { label: 'Underweight', color: 'text-blue-500' };
+  if (bmi < 25) return { label: 'Normal', color: 'text-emerald-600' };
+  if (bmi < 30) return { label: 'Overweight', color: 'text-amber-600' };
+  return { label: 'Obese', color: 'text-rose-600' };
+};
+
+// ─── Small Reusable Stat Block ───────────────────────────────────────
+const StatBlock = ({ icon: Icon, label, value, unit, color, bg }) => (
+  <div className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+    <div className={`w-11 h-11 rounded-xl ${bg} ${color} flex items-center justify-center shrink-0`}>
+      <Icon size={20} />
+    </div>
+    <div>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+      <p className="text-lg font-black text-slate-900 leading-none mt-0.5">
+        {value} <span className="text-sm font-medium text-slate-400">{unit}</span>
+      </p>
+    </div>
+  </div>
+);
+
+// ─── Appointment Card ────────────────────────────────────────────────
+const AppointmentRow = ({ appt, navigate }) => {
+  const doctor = appt.doctor || {};
+  const doctorName = doctor.fullName || doctor.name || 'Doctor';
+  const specialization = doctor.specialization || '—';
+  const avatar = doctor.profileImage?.imageUrl || doctor.profileImage;
+  const isTelemedicine = appt.appointmentType === 'telemedicine';
+  const dateStr = fmtDate(appt.scheduledDate);
+  const time = appt.scheduledTime?.startTime || '';
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Welcome Header */}
-        <header className="mb-10">
-          <h1 className="text-4xl font-black text-zinc-950 tracking-tight">
-            Good morning, {user?.firstName || 'there'}
-          </h1>
-          <p className="text-zinc-500 font-medium mt-1">Your health dashboard is up to date with the latest AI insights.</p>
+    <div
+      className="group flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer"
+      onClick={() => navigate('/dashboard/patient/appointments')}
+    >
+      {/* Avatar */}
+      <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center shrink-0 border border-slate-100">
+        {avatar ? (
+          <img src={avatar} alt={doctorName} className="w-full h-full object-cover" />
+        ) : (
+          <User size={20} className="text-blue-400" />
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-black text-slate-800 truncate">Dr. {doctorName}</p>
+          <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide border ${statusColor(appt.status)}`}>
+            {appt.status}
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{specialization}</p>
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+          <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+            <Calendar size={11} /> {dateStr}
+          </span>
+          {time && (
+            <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+              <Clock size={11} /> {time}
+            </span>
+          )}
+          <span className={`flex items-center gap-1 text-[10px] font-bold ${isTelemedicine ? 'text-blue-500' : 'text-emerald-600'}`}>
+            {isTelemedicine ? <Video size={11} /> : <Building2 size={11} />}
+            {isTelemedicine ? 'Telemedicine' : 'In-Clinic'}
+          </span>
+        </div>
+      </div>
+
+      <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 shrink-0 transition-colors" />
+    </div>
+  );
+};
+
+// ─── Main Dashboard ─────────────────────────────────────────────────
+export default function PatientDashboard() {
+  const { user } = useAuthContext();
+  const navigate = useNavigate();
+
+  // Fetch profile
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['patientBasicInfo'],
+    queryFn: patientService.getBasicInfo,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch upcoming appointments (pending + confirmed, limit 5)
+  const { data: apptData, isLoading: apptLoading } = useQuery({
+    queryKey: ['myAppointments', 'upcoming'],
+    queryFn: () => getMyAppointments({ limit: 5, sortBy: 'scheduledDate', sortOrder: 'asc' }),
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Fetch medications
+  const { data: medications = [], isLoading: medsLoading } = useQuery({
+    queryKey: ['medications'],
+    queryFn: patientService.getMedications,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Fetch chronic diseases
+  const { data: chronicDiseases = [] } = useQuery({
+    queryKey: ['chronicDiseases'],
+    queryFn: patientService.getChronicDiseases,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Fetch allergies
+  const { data: allergies = [] } = useQuery({
+    queryKey: ['allergies'],
+    queryFn: patientService.getAllergies,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const appointments = useMemo(() => {
+    return apptData?.data?.appointments || apptData?.appointments || [];
+  }, [apptData]);
+
+  const upcomingAppts = useMemo(
+    () => appointments.filter(a => ['pending', 'confirmed', 'inProgress'].includes(a.status)).slice(0, 3),
+    [appointments]
+  );
+
+  const bmi = bmiFromMetricKgCm(profile?.weight, profile?.height);
+  const bmiInfo = bmiLabel(bmi);
+
+  // Profile completion
+  const completionPct = useMemo(() => {
+    if (!profile) return 0;
+    const checks = [
+      profile.phone, profile.height, profile.weight, profile.bloodType,
+      profile.address?.city, medications.length > 0, allergies.length > 0,
+      chronicDiseases.length > 0,
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }, [profile, medications, allergies, chronicDiseases]);
+
+  return (
+    <div className="p-4 md:p-8 bg-slate-50/40 min-h-screen">
+      <div className="max-w-7xl mx-auto space-y-8">
+
+        {/* ── WELCOME HEADER ── */}
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              {greet()}, {user?.firstName || 'there'} 👋
+            </h1>
+            <p className="text-slate-400 font-medium mt-1 text-sm">
+              Here's a live overview of your health today.
+            </p>
+          </div>
+          {!profileLoading && completionPct < 100 && (
+            <button
+              onClick={() => navigate('/dashboard/patient/profile')}
+              className="flex items-center gap-2 bg-white border border-blue-200 text-blue-600 px-5 py-2.5 rounded-2xl text-xs font-black shadow-sm hover:bg-blue-50 transition-all active:scale-95"
+            >
+              <Shield size={14} />
+              Profile {completionPct}% complete — finish it
+              <ArrowUpRight size={14} />
+            </button>
+          )}
         </header>
 
-        {/* ─── MAIN GRID ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* ── MAIN GRID ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-          {/* LEFT & CENTER COLUMN (8 cols) */}
-          <div className="lg:col-span-8 space-y-8">
+          {/* LEFT + CENTER (8 cols) */}
+          <div className="lg:col-span-8 space-y-6">
 
-            {/* 1. DIGITAL TWIN HERO CARD */}
-            <div className="bg-white rounded-[2.5rem] p-8 border border-zinc-100 shadow-sm flex flex-col md:flex-row gap-10 items-center overflow-hidden relative group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-700" />
-
-              {/* Twin Visualization Placeholder */}
-              <div className="w-64 h-72 bg-zinc-50 rounded-[2rem] border border-zinc-100 relative flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_#3b82f6_1px,transparent_1px)] bg-[size:10px_10px]" />
-                <div className="relative z-10 text-blue-500/30">
-                  <Activity size={120} strokeWidth={0.5} className="animate-pulse" />
-                </div>
-                {/* Floating Indicators */}
-                <div className="absolute top-10 right-4 bg-white shadow-lg p-2 rounded-lg border border-zinc-100 flex items-center gap-2">
-                  <Heart size={12} className="text-red-500" />
-                  <span className="text-[10px] font-bold">72 BPM</span>
-                </div>
-                <div className="absolute bottom-10 left-4 bg-white shadow-lg p-2 rounded-lg border border-zinc-100 flex items-center gap-2">
-                  <Zap size={12} className="text-amber-500" />
-                  <span className="text-[10px] font-bold text-zinc-400">120/80</span>
-                </div>
+            {/* 1. PROFILE HERO CARD */}
+            {profileLoading ? (
+              <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm flex items-center justify-center h-36">
+                <Loader2 className="animate-spin text-blue-500" size={28} />
               </div>
+            ) : profile ? (
+              <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm flex flex-col sm:flex-row items-center gap-8 relative overflow-hidden">
+                {/* Glow */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/60 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
 
-              {/* Twin Info */}
-              <div className="flex-1 space-y-6 relative z-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                  <Zap size={12} fill="currentColor" />
-                  AI Twin Active
-                </div>
-                <div>
-                  <h2 className="text-3xl font-black text-zinc-950 mb-1">Your Digital Twin</h2>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-black text-blue-600">84</span>
-                    <span className="text-zinc-400 font-bold">/ 100 Health Score</span>
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white shadow-lg bg-slate-100">
+                    <img
+                      src={
+                        profile.profileImage?.imageUrl ||
+                        profile.profileImage ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName || 'User')}&background=DBEAFE&color=1d4ed8&bold=true`
+                      }
+                      alt={profile.fullName}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                </div>
-                <p className="text-zinc-500 text-sm leading-relaxed max-w-sm">
-                  Your physiological model is synced with your latest wearable data. <span className="text-emerald-600 font-bold">12% improvement</span> in cardiovascular efficiency detected this month.
-                </p>
-                <div className="flex gap-3">
-                  <button className="px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-sm">Sync New Data</button>
-                  <button className="px-6 py-3 bg-zinc-100 text-zinc-600 font-bold rounded-2xl hover:bg-zinc-200 transition-all text-sm">View Analytics</button>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. APPOINTMENTS & NURSE SECTION */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Book a Doctor */}
-              <div className="bg-white rounded-[2rem] p-6 border border-zinc-100 shadow-sm space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
-                    <Calendar size={20} />
-                  </div>
-                  <button className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">View All</button>
-                </div>
-                <div>
-                  <h3 className="font-bold text-zinc-950">Book a Doctor</h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">Schedule specialists or view visits</p>
-                </div>
-                <div className="bg-zinc-50 rounded-2xl p-4 flex items-center justify-between group cursor-pointer hover:bg-zinc-100 transition-colors border border-transparent hover:border-zinc-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden border-2 border-white"><img src="https://i.pravatar.cc/150?u=sarah" alt="" /></div>
-                    <div>
-                      <p className="text-sm font-bold text-zinc-950 leading-none">Dr. Sarah Aris</p>
-                      <p className="text-[10px] text-zinc-400 mt-1 uppercase font-bold tracking-tighter">Cardiology • Tomorrow, 10:00 AM</p>
+                  {completionPct === 100 && (
+                    <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
+                      <BadgeCheck size={14} className="text-white" />
                     </div>
-                  </div>
-                  <ChevronRight size={16} className="text-zinc-300 group-hover:text-blue-600 transition-colors" />
+                  )}
                 </div>
-                <button className="w-full py-3 rounded-2xl border-2 border-dashed border-zinc-200 text-zinc-400 text-sm font-bold hover:border-blue-500/50 hover:text-blue-500 transition-all flex items-center justify-center gap-2">
-                  <Plus size={16} /> Schedule New Visit
+
+                {/* Info */}
+                <div className="flex-1 space-y-2 relative z-10 text-center sm:text-left">
+                  <h2 className="text-2xl font-black text-slate-900">{profile.fullName}</h2>
+                  <p className="text-slate-400 text-sm font-semibold">
+                    {profile.age ? `${profile.age} years old` : ''} {profile.gender ? `• ${profile.gender}` : ''} {profile.maritalStatus ? `• ${profile.maritalStatus}` : ''}
+                  </p>
+                  <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-1">
+                    {profile.bloodType && (
+                      <span className="flex items-center gap-1.5 bg-rose-50 border border-rose-100 text-rose-600 px-3 py-1 rounded-full text-xs font-black">
+                        <Droplets size={12} /> {profile.bloodType}
+                      </span>
+                    )}
+                    {profile.address?.city && (
+                      <span className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold">
+                        <MapPin size={12} /> {profile.address.city}
+                        {profile.address.governorate ? `, ${profile.address.governorate}` : ''}
+                      </span>
+                    )}
+                    {profile.phone && (
+                      <span className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold">
+                        <PhoneCall size={12} /> {profile.phone}
+                      </span>
+                    )}
+                    {chronicDiseases.length > 0 && chronicDiseases.slice(0, 2).map(d => (
+                      <span key={d._id} className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">
+                        <HeartPulse size={12} /> {d.nameOfDisease}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex flex-col gap-2 shrink-0 relative z-10">
+                  <button
+                    onClick={() => navigate('/dashboard/patient/appointments')}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md shadow-blue-200 transition-all active:scale-95"
+                  >
+                    <Calendar size={14} /> Book Appointment
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard/patient/profile')}
+                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-xs font-black transition-all active:scale-95"
+                  >
+                    <User size={14} /> View Profile
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {/* 2. VITALS STATS (from real profile data) */}
+            {profile && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <StatBlock
+                  icon={Weight}
+                  label="Weight"
+                  value={profile.weight ? `${profile.weight}` : '—'}
+                  unit={profile.weight ? 'kg' : ''}
+                  color="text-blue-600"
+                  bg="bg-blue-50"
+                />
+                <StatBlock
+                  icon={Ruler}
+                  label="Height"
+                  value={profile.height ? `${profile.height}` : '—'}
+                  unit={profile.height ? 'cm' : ''}
+                  color="text-indigo-600"
+                  bg="bg-indigo-50"
+                />
+                <StatBlock
+                  icon={Activity}
+                  label="BMI Index"
+                  value={bmi ? bmi.toFixed(1) : '—'}
+                  unit={bmiInfo?.label || ''}
+                  color={bmiInfo?.color || 'text-slate-400'}
+                  bg="bg-slate-50"
+                />
+                <StatBlock
+                  icon={Heart}
+                  label="Blood Type"
+                  value={profile.bloodType || '—'}
+                  unit=""
+                  color="text-rose-500"
+                  bg="bg-rose-50"
+                />
+              </div>
+            )}
+
+            {/* 3. UPCOMING APPOINTMENTS */}
+            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Calendar size={16} />
+                  </div>
+                  <h3 className="font-black text-slate-900">Upcoming Appointments</h3>
+                </div>
+                <button
+                  onClick={() => navigate('/dashboard/patient/appointments')}
+                  className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1"
+                >
+                  View All <ChevronRight size={12} />
                 </button>
               </div>
 
-              {/* Request a Nurse */}
-              <div className="bg-white rounded-[2rem] p-6 border border-zinc-100 shadow-sm space-y-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
-                  <Stethoscope size={20} />
+              {apptLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="animate-spin text-blue-400" size={24} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-zinc-950">Request a Nurse</h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">On-demand home care & testing</p>
+              ) : upcomingAppts.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingAppts.map(appt => (
+                    <AppointmentRow key={appt._id} appt={appt} navigate={navigate} />
+                  ))}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <button className="flex flex-col items-center justify-center p-4 rounded-2xl bg-zinc-50 border border-zinc-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all gap-2 group">
-                    <div className="text-zinc-400 group-hover:text-emerald-600 transition-colors"><Footprints size={20} /></div>
-                    <span className="text-[10px] font-bold text-zinc-500 group-hover:text-emerald-700 transition-colors uppercase tracking-widest">Home Visit</span>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
+                  <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center">
+                    <Calendar size={24} className="text-slate-300" />
+                  </div>
+                  <p className="text-sm text-slate-400 font-semibold">No upcoming appointments</p>
+                  <button
+                    onClick={() => navigate('/dashboard/patient/appointments')}
+                    className="flex items-center gap-1.5 text-xs font-black text-blue-600 border border-dashed border-blue-200 px-4 py-2.5 rounded-xl hover:bg-blue-50 transition-colors"
+                  >
+                    <Plus size={14} /> Schedule a Visit
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 rounded-2xl bg-zinc-50 border border-zinc-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all gap-2 group">
-                    <div className="text-zinc-400 group-hover:text-emerald-600 transition-colors"><Zap size={20} /></div>
-                    <span className="text-[10px] font-bold text-zinc-500 group-hover:text-emerald-700 transition-colors uppercase tracking-widest">Vaccination</span>
-                  </button>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* 3. MEDICATIONS SECTION */}
-            <div className="bg-white rounded-[2rem] p-8 border border-zinc-100 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                  <Pill size={24} className="text-blue-500" />
-                  <h3 className="text-xl font-black text-zinc-950">Your Medications</h3>
-                </div>
-                <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full uppercase tracking-widest">3 Active Prescriptions</span>
-              </div>
-              <div className="space-y-4">
-                <div className="p-6 rounded-3xl bg-zinc-50 border border-zinc-100 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-white hover:shadow-xl hover:shadow-zinc-200/40 transition-all duration-500">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center text-blue-600 shadow-sm"><Pill size={24} /></div>
-                    <div>
-                      <h4 className="font-bold text-zinc-900 text-lg leading-none">Lisinopril (10mg)</h4>
-                      <p className="text-sm text-zinc-400 mt-1.5">Take once daily for Blood Pressure</p>
-                    </div>
+            {/* 4. MEDICATIONS */}
+            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Pill size={16} />
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-xs font-black text-zinc-900 uppercase tracking-widest mb-1.5">12 Days Left</p>
-                      <div className="w-32 h-1.5 bg-zinc-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-600 rounded-full" style={{ width: '40%' }} />
+                  <h3 className="font-black text-slate-900">Current Medications</h3>
+                </div>
+                <button
+                  onClick={() => navigate('/dashboard/patient/profile')}
+                  className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1"
+                >
+                  Manage <ChevronRight size={12} />
+                </button>
+              </div>
+
+              {medsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="animate-spin text-emerald-400" size={22} />
+                </div>
+              ) : medications.length > 0 ? (
+                <div className="space-y-3">
+                  {medications.slice(0, 4).map(med => (
+                    <div key={med._id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-white hover:border-slate-200 hover:shadow-sm transition-all">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+                        <Pill size={18} />
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-slate-800 truncate">{med.name}</p>
+                        {med.dosage && (
+                          <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{med.dosage}</p>
+                        )}
+                        {med.reason && (
+                          <p className="text-[10px] text-slate-400 italic mt-0.5 truncate">{med.reason}</p>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-[9px] font-black bg-emerald-50 border border-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                        Active
+                      </span>
                     </div>
-                    <button className="px-5 py-2.5 bg-white border-2 border-zinc-200 text-zinc-600 font-bold rounded-xl text-xs hover:border-blue-600 hover:text-blue-600 transition-all">Refill Now</button>
-                  </div>
+                  ))}
+                  {medications.length > 4 && (
+                    <p className="text-xs text-center text-slate-400 font-semibold pt-1">
+                      +{medications.length - 4} more medications in profile
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 px-6 py-4 bg-zinc-950 rounded-2xl text-white shadow-xl shadow-zinc-900/10">
-                  <Activity size={18} className="text-blue-400" />
-                  <p className="text-xs font-bold">Next delivery: <span className="text-blue-400">Today by 6:00 PM</span></p>
-                  <button className="ml-auto text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Track Package</button>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+                  <Pill size={28} className="text-slate-200" />
+                  <p className="text-sm text-slate-400 font-semibold">No medications recorded</p>
+                  <button
+                    onClick={() => navigate('/dashboard/patient/profile')}
+                    className="text-xs font-black text-blue-600 hover:underline"
+                  >
+                    Add medications →
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
 
           </div>
 
           {/* RIGHT COLUMN (4 cols) */}
-          <div className="lg:col-span-4 space-y-8">
+          <div className="lg:col-span-4 space-y-6">
 
-            {/* 4. HEALTH OVERVIEW (Vitals Summary) */}
-            <div className="bg-white rounded-[2.5rem] p-8 border border-zinc-100 shadow-sm space-y-8">
-              <h3 className="text-xl font-black text-zinc-950">Health Overview</h3>
-              <div className="space-y-8">
+            {/* 5. QUICK ACTIONS */}
+            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
+              <h3 className="font-black text-slate-900 mb-4">Quick Actions</h3>
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Heart Rate', value: '72', unit: 'BPM', icon: Heart, color: 'text-red-500', bg: 'bg-red-50', trend: 'normal' },
-                  { label: 'Sleep', value: '7h 45m', unit: '', icon: Moon, color: 'text-blue-500', bg: 'bg-blue-50', trend: '+8% Good' },
-                  { label: 'Steps', value: '8,432', unit: '', icon: Footprints, color: 'text-amber-500', bg: 'bg-amber-50', pct: 84 },
-                ].map((stat, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center shadow-sm`}>
-                        <stat.icon size={22} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{stat.label}</p>
-                        <p className="text-xl font-black text-zinc-950 leading-none mt-1">{stat.value} <span className="text-sm font-medium text-zinc-400">{stat.unit}</span></p>
-                      </div>
+                  { label: 'Book Doctor', icon: Stethoscope, color: 'text-blue-600', bg: 'bg-blue-50', path: '/dashboard/patient/appointments' },
+                  { label: 'My Records', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50', path: '/dashboard/patient/records' },
+                  { label: 'Digital Twin', icon: Activity, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/dashboard/patient/digital-twin' },
+                  { label: 'Group Therapy', icon: HeartPulse, color: 'text-rose-500', bg: 'bg-rose-50', path: '/dashboard/patient/therapy-groups' },
+                ].map(({ label, icon: Icon, color, bg, path }) => (
+                  <button
+                    key={label}
+                    onClick={() => navigate(path)}
+                    className={`flex flex-col items-center justify-center gap-2.5 p-5 rounded-2xl border border-transparent hover:border-slate-100 hover:bg-slate-50 transition-all group`}
+                  >
+                    <div className={`w-12 h-12 rounded-xl ${bg} ${color} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform`}>
+                      <Icon size={22} />
                     </div>
-                    {stat.trend && <span className="text-[10px] font-bold text-emerald-500 uppercase">{stat.trend}</span>}
-                    {stat.pct && (
-                      <div className="relative w-12 h-12 flex items-center justify-center">
-                        <svg className="w-12 h-12 transform -rotate-90">
-                          <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-zinc-100" />
-                          <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray={126} strokeDashoffset={126 - (126 * stat.pct) / 100} className="text-amber-500 transition-all duration-1000" />
-                        </svg>
-                        <span className="absolute text-[10px] font-black text-zinc-900">{stat.pct}%</span>
-                      </div>
-                    )}
-                  </div>
+                    <span className="text-[11px] font-black text-slate-600 uppercase tracking-wide text-center leading-tight">{label}</span>
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* 5. AI INSIGHTS CARD */}
-            <div className="bg-zinc-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 p-4 opacity-20"><Zap size={80} /></div>
-              <div className="relative z-10 space-y-8">
-                <div className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                  <Zap size={14} fill="currentColor" /> AI Insights
-                </div>
-                <div className="space-y-6">
-                  <div className="p-5 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors">
-                    <p className="text-sm leading-relaxed text-zinc-300">
-                      "Your resting heart rate has lowered by 4 BPM over the last 14 days, indicating <span className="text-blue-400 font-bold">improved aerobic fitness.</span>"
-                    </p>
+            {/* 6. MEDICAL SUMMARY */}
+            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm space-y-5">
+              <h3 className="font-black text-slate-900">Medical Summary</h3>
+
+              {/* Chronic Diseases */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Chronic Conditions</p>
+                {chronicDiseases.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {chronicDiseases.map(d => (
+                      <span key={d._id} className="text-xs bg-amber-50 border border-amber-100 text-amber-700 px-2.5 py-1 rounded-lg font-bold">
+                        {d.nameOfDisease}
+                      </span>
+                    ))}
                   </div>
-                  <div className="p-5 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors">
-                    <p className="text-sm leading-relaxed text-zinc-300">
-                      "Moderate caffeine sensitivity detected after 4PM. Try herbal tea for better deep sleep cycles."
-                    </p>
-                  </div>
-                </div>
-                <button className="w-full py-4 bg-blue-600 hover:bg-blue-500 transition-all rounded-2xl font-black text-sm shadow-xl shadow-blue-900/50">
-                  Generate Full Report
-                </button>
+                ) : (
+                  <p className="text-xs text-slate-400 italic font-medium">None recorded</p>
+                )}
               </div>
+
+              {/* Allergies */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Known Allergies</p>
+                {allergies.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {allergies.map(a => (
+                      <span key={a._id} className="text-xs bg-rose-50 border border-rose-100 text-rose-700 px-2.5 py-1 rounded-lg font-bold">
+                        {a.allergen}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic font-medium">None recorded</p>
+                )}
+              </div>
+
+              <button
+                onClick={() => navigate('/dashboard/patient/profile')}
+                className="w-full py-2.5 rounded-xl border border-dashed border-slate-200 text-xs font-black text-slate-500 hover:border-blue-300 hover:text-blue-600 transition-all"
+              >
+                View Full Medical Profile →
+              </button>
             </div>
 
-            {/* 6. PHARMACY PARTNER CARD */}
-            <div className="bg-blue-50 rounded-[2.5rem] p-8 border border-blue-100">
-              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Pharmacy Partners</span>
-              <h3 className="text-2xl font-black text-zinc-950 mt-4 mb-2">20% Off Refills</h3>
-              <p className="text-zinc-500 text-sm mb-6 leading-relaxed">Exclusive discount for Neura Health members at CVS and Walgreens.</p>
-              <a href="#" className="flex items-center gap-2 text-blue-600 font-bold text-sm hover:gap-4 transition-all group">
-                Claim Offer <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </a>
+            {/* 7. DIGITAL TWIN TEASER */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[2rem] p-6 text-white relative overflow-hidden shadow-xl">
+              <div className="absolute top-0 right-0 opacity-10 p-4">
+                <Zap size={80} />
+              </div>
+              <div className="relative z-10 space-y-4">
+                <div className="inline-flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase tracking-widest">
+                  <Zap size={12} fill="currentColor" /> AI Digital Twin
+                </div>
+                <div>
+                  <h3 className="text-xl font-black">Your Health Model</h3>
+                  <p className="text-slate-400 text-xs font-semibold mt-1 leading-relaxed">
+                    Your physiological twin is ready. Sync new data to get predictive health insights.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/dashboard/patient/digital-twin')}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-500 transition-colors rounded-xl font-black text-sm shadow-lg shadow-blue-900/30 active:scale-95"
+                >
+                  Open Digital Twin
+                </button>
+              </div>
             </div>
 
           </div>

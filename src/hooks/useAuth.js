@@ -45,8 +45,8 @@ export function useLogin() {
       toast.success(res.message || `Welcome back, ${firstName}!`);
       
       let route = ROLE_ROUTES[userObj.role] ?? '/';
-      if (userObj.role === 'doctor' && !userObj.isVerified) {
-        route = '/dashboard/doctor/profile';
+      if (userObj.role === 'doctor' && !userObj.isActive && !userObj.isVerified) {
+        route = '/dashboard/doctor/onboarding';
       }
       navigate(route, { replace: true });
     },
@@ -79,8 +79,8 @@ export function useRegister() {
       toast.success(res.message || `Account created! Welcome to NEURA, ${fullUser.firstName || ''}.`);
       
       let route = ROLE_ROUTES[fullUser.role] ?? '/';
-      if (fullUser.role === 'doctor' && !fullUser.isVerified) {
-        route = '/dashboard/doctor/profile';
+      if (fullUser.role === 'doctor' && !fullUser.isActive && !fullUser.isVerified) {
+        route = '/dashboard/doctor/onboarding';
       }
       navigate(route, { replace: true });
     },

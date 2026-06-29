@@ -53,7 +53,7 @@ const DoctorCard = ({ doctor }) => {
       <div className="w-full sm:w-44 flex-shrink-0 bg-gradient-to-b from-slate-50 to-slate-100 flex items-end justify-center min-h-[160px] sm:min-h-[auto] relative overflow-hidden">
         {profileImage ? (
           <img
-            src={profileImage}
+            src={typeof profileImage === 'string' ? profileImage : profileImage?.imageUrl}
             alt={name}
             className="w-full h-full object-cover object-top"
           />
@@ -331,9 +331,13 @@ const AppointmentsPage = () => {
     queryKey: ["doctors", filters],
     queryFn: () => {
       const cleanFilters = Object.fromEntries(
-        Object.entries(filters).filter(
-          ([_, v]) => v !== "" && v !== false && v !== undefined
-        )
+        Object.entries(filters).filter(([key, v]) => {
+          // Exclude empty strings, false booleans, undefined, null
+          if (v === '' || v === false || v === undefined || v === null) return false;
+          // minRating=0 means 'no minimum' → don't send it (API default returns all)
+          if (key === 'minRating' && v === 0) return false;
+          return true;
+        })
       );
       return getDoctors(cleanFilters);
     },
@@ -361,7 +365,8 @@ const AppointmentsPage = () => {
     }
   };
 
-  const doctors = data?.data || [];
+  // API returns: { status, data: [...doctors], meta: { total, page, totalPages... } }
+  const doctors = Array.isArray(data?.data) ? data.data : [];
 
   return (
     <div className="min-h-screen bg-slate-50">
