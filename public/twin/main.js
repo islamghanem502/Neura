@@ -4,21 +4,33 @@ let modelRoot = null;
 const spin = { active: false, speed: 0.01 };
 let modelContainer = null;
 
+// ================================
+// GENDER CONFIG
+// ================================
+// Male model: Man-v1.glb  | outer body mesh: "Human1" | morph target: "fat"
+// Female model: Female-V1.glb | outer body mesh: "Human1" | morph target: "skinnyFemale"
+let currentGender = 'male'; // runtime gender — updated by loadModel / window.setGender
+
+// Organ mesh names are IDENTICAL in both models
+const ORGAN_NAMES = [
+    'lung',            // Lung
+    'heart',           // Heart
+    'brain',           // Brain
+    'stomach',         // Stomach
+    'intestinesLarge', // Large intestines
+    'intestinesSmall', // Small intestines
+    'liver',           // Liver
+    'kidneys',         // Kidneys
+    'bladder'          // Bladder
+];
+
+// Female model also has a "lungBar" node — we expose it so it can breathe too
+const FEMALE_EXTRA_LUNG_NAMES = ['lungBar'];
+
 // Organ focusing system
 let raycaster = new THREE.Raycaster();
 let pointer = new THREE.Vector2();
 let organMeshes = [];
-const ORGAN_NAMES = [
-    'lung', // Lung part 1
-    'heart', // Heart
-    'brain', // Brain (most likely candidate)
-    'stomach', // Stomach
-    'intestinesLarge', // Large intestines
-    'intestinesSmall', // Small intestines
-    'liver', // Liver
-    'kidneys', // Kidneys
-    'bladder' // Bladder
-];
 
 // Organ information database
 const ORGAN_INFO = {
@@ -267,25 +279,47 @@ function addLights() {
 // ================================
 // MODEL LOADING
 // ================================
-function loadModel() {
+
+// Detect gender from URL param or window variable set by React
+function getPatientGender() {
+    const params = new URLSearchParams(window.location.search);
+    const urlGender = params.get('gender');
+    if (urlGender) return urlGender.toLowerCase();
+    if (window.patientGender) return window.patientGender.toLowerCase();
+    return 'male';
+}
+
+function loadModel(genderOverride) {
     const loader = new THREE.GLTFLoader();
-    const modelPath = './Man-v1.glb';
+    const gender = genderOverride !== undefined ? genderOverride : getPatientGender();
+    currentGender = gender;
+    const isFemale = gender === 'female';
+    const modelPath = isFemale ? './Female-V1.glb' : './Man-v1.glb';
+
+    console.log('🧬 Loading Digital Twin model — gender:', gender, '→', modelPath);
+
+    // Reset animation trackers before loading new model
+    heartMesh = null;
+    heartOriginalScale = null;
+    lungMeshes = [];
+    lungOriginalScales = [];
 
     loader.load(
         modelPath,
-
-        // onLoad - on success
         function (gltf) {
             const model = gltf.scene;
 
-            // Setup model
-            setupModel(model);
+            // Use gender-specific setup
+            if (isFemale) {
+                setupFemaleModel(model);
+            } else {
+                setupModel(model); // original male setup — unchanged
+            }
 
-            // Add model to scene
             scene.add(model);
-            // Expose model for interactive tweaks
             modelRoot = model;
             window.model3D = modelRoot;
+
             window.moveModel = (dx = 0, dy = 0, dz = 0) => {
                 if (!modelRoot) return;
                 modelRoot.position.x += dx;
@@ -299,39 +333,38 @@ function loadModel() {
                 modelRoot.rotation.z += rz;
             };
 
-            // Weight control API
+            // Weight / BMI morph API — gender-aware morph target name
             window.setWeight = (value) => {
                 if (!modelRoot) return;
                 const weightValue = Math.max(0, Math.min(1, value));
+                const morphName = currentGender === 'female' ? 'skinnyFemale' : 'fat';
                 modelRoot.traverse(function (child) {
-                    // Update shape key
-                    if (child.isMesh && child.morphTargetDictionary && child.morphTargetDictionary['fat'] !== undefined) {
-                        const targetIndex = child.morphTargetDictionary['fat'];
-                        child.morphTargetInfluences[targetIndex] = weightValue;
+                    if (child.isMesh && child.morphTargetDictionary) {
+                        if (child.morphTargetDictionary[morphName] !== undefined) {
+                            // Female uses "skinnyFemale": 0 = fat, 1 = skinny — invert
+                            const val = currentGender === 'female' ? (1 - weightValue) : weightValue;
+                            child.morphTargetInfluences[child.morphTargetDictionary[morphName]] = val;
+                        }
                     }
-                    // Update holographic shader color transition
                     if (child.isMesh && child.material && child.material.uniforms && child.material.uniforms.uWeight) {
                         child.material.uniforms.uWeight.value = weightValue;
                     }
                 });
             };
 
-            // Hook up UI slider if present
             const weightSlider = document.getElementById('weight-slider');
             if (weightSlider) {
                 weightSlider.addEventListener('input', (e) => {
                     window.setWeight(parseFloat(e.target.value));
                 });
             }
+
             window.spinModel = (on = true, speed = 0.01) => {
                 spin.active = !!on;
                 spin.speed = speed;
             };
 
-            // Auto-fit camera
             autoCamera(model);
-
-            // Store original camera position for reset
             originalCameraPosition = camera.position.clone();
             originalControlsTarget = controls.target.clone();
 
@@ -341,11 +374,14 @@ function loadModel() {
     );
 }
 
+// ================================
+// MALE SETUP — unchanged from original
+// ================================
 function setupModel(model) {
     holographicMaterial = createHolographicMaterial();
 
     // Print all Morph Targets in the model
-    console.log('🎯 === MORPH TARGETS DETECTION ===');
+    console.log('🎯 === MORPH TARGETS DETECTION (MALE) ===');
     model.traverse(function (child) {
         if (child.isMesh && child.morphTargetDictionary) {
             console.log(`📋 Mesh: "${child.name}" has Morph Targets:`);
@@ -388,31 +424,16 @@ function setupModel(model) {
                 }
 
                 // Log all digestive system organs
-                if (child.name === 'stomach') {
-                    console.log(`🤢 Stomach mesh "${child.name}" found!`);
-                }
-                if (child.name === 'intestinesLarge') {
-                    console.log(`🦠 Large intestine mesh "${child.name}" found!`);
-                }
-                if (child.name === 'intestinesSmall') {
-                    console.log(`🧬 Small intestine mesh "${child.name}" found!`);
-                }
-                if (child.name === 'liver') {
-                    console.log(`🟤 Liver mesh "${child.name}" found!`);
-                }
-                if (child.name === 'kidneys') {
-                    console.log(`🔴 Kidneys mesh "${child.name}" found!`);
-                }
-                if (child.name === 'bladder') {
-                    console.log(`💧 Bladder mesh "${child.name}" found!`);
-                }
+                if (child.name === 'stomach')      console.log(`🤢 Stomach mesh "${child.name}" found!`);
+                if (child.name === 'intestinesLarge') console.log(`🦠 Large intestine mesh "${child.name}" found!`);
+                if (child.name === 'intestinesSmall') console.log(`🧬 Small intestine mesh "${child.name}" found!`);
+                if (child.name === 'liver')         console.log(`🟤 Liver mesh "${child.name}" found!`);
+                if (child.name === 'kidneys')       console.log(`🔴 Kidneys mesh "${child.name}" found!`);
+                if (child.name === 'bladder')       console.log(`💧 Bladder mesh "${child.name}" found!`);
             } else {
                 // Put all other meshes on layer 1 (invisible to raycaster)
                 child.layers.set(1);
             }
-            // Keep original materials for internal organs and other parts
-
-            // Disable shadows for all meshes to maintain the holographic effect
             child.castShadow = false;
             child.receiveShadow = false;
         }
@@ -420,7 +441,83 @@ function setupModel(model) {
 
     model.scale.setScalar(1);
     model.position.set(0, 0, 0);
-    // model.rotation.y = Math.PI - Math.PI / -20;
+}
+
+// ================================
+// FEMALE SETUP — mirrors male but uses female-specific node names
+// Female-V1.glb findings:
+//   - Outer body mesh node : "Human1"  (mesh: "fatFemale.003D.001")
+//   - Morph target          : "skinnyFemale"  (0 = fat, 1 = skinny — inverted vs male)
+//   - Shared organ names    : brain, lung, lungBar, heart, intestinesLarge,
+//                             intestinesSmall, stomach, liver, kidneys, bladder
+// ================================
+function setupFemaleModel(model) {
+    holographicMaterial = createHolographicMaterial();
+
+    console.log('🎯 === MORPH TARGETS DETECTION (FEMALE) ===');
+    model.traverse(function (child) {
+        if (child.isMesh && child.morphTargetDictionary) {
+            console.log(`📋 Female mesh: "${child.name}" has Morph Targets:`);
+            Object.keys(child.morphTargetDictionary).forEach((target, index) => {
+                console.log(`   ${index + 1}. "${target}"`);
+            });
+            console.log('---');
+        }
+    });
+    console.log('🎯 === END MORPH TARGETS ===');
+
+    // Female-specific lung breathing: both "lung" and "lungBar" breathe
+    const femaleLungNames = [...ORGAN_NAMES.filter(n => n === 'lung'), ...FEMALE_EXTRA_LUNG_NAMES];
+
+    model.traverse(function (child) {
+        if (!child.isMesh) return;
+
+        if (child.name === 'Human1') {
+            // Holographic outer body — same shader as male
+            child.material = holographicMaterial.clone();
+            child.material.uniforms = {
+                time:    { value: 0.0 },
+                uWeight: { value: 0.2 }
+            };
+            child.layers.set(1); // invisible to raycaster
+
+        } else if (ORGAN_NAMES.includes(child.name) || FEMALE_EXTRA_LUNG_NAMES.includes(child.name)) {
+            // All internal organs — layer 0 (raycaster visible)
+            child.layers.set(0);
+
+            // ♥ Heart pulsing
+            if (child.name === 'heart') {
+                heartMesh = child;
+                heartOriginalScale = child.scale.clone();
+                console.log('💗 [Female] Heart mesh found and ready for pulsing!');
+            }
+
+            // 🫁 Lung breathing — includes lungBar which is the thyroid/lung bar
+            if (child.name === 'lung' || child.name === 'lungBar') {
+                lungMeshes.push(child);
+                lungOriginalScales.push(child.scale.clone());
+                console.log(`🫁 [Female] Lung mesh "${child.name}" found and ready for breathing!`);
+            }
+
+            if (child.name === 'brain')           console.log(`🧠 [Female] Brain mesh found!`);
+            if (child.name === 'stomach')          console.log(`🤢 [Female] Stomach mesh found!`);
+            if (child.name === 'intestinesLarge')  console.log(`🦠 [Female] Large intestine mesh found!`);
+            if (child.name === 'intestinesSmall')  console.log(`🧬 [Female] Small intestine mesh found!`);
+            if (child.name === 'liver')            console.log(`🟤 [Female] Liver mesh found!`);
+            if (child.name === 'kidneys')          console.log(`🔴 [Female] Kidneys mesh found!`);
+            if (child.name === 'bladder')          console.log(`💧 [Female] Bladder mesh found!`);
+
+        } else {
+            // Everything else (decorative nodes, cameras, etc.) — layer 1
+            child.layers.set(1);
+        }
+
+        child.castShadow   = false;
+        child.receiveShadow = false;
+    });
+
+    model.scale.setScalar(1);
+    model.position.set(0, 0, 0);
 }
 
 function autoCamera(model) {

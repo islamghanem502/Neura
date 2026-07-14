@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 
-export default function TwinViewer({ selectedOrgan, weight = 0, organsList = [] }) {
+export default function TwinViewer({ selectedOrgan, weight = 0, organsList = [], gender = 'male' }) {
   const iframeRef = useRef(null);
 
   const focusOrgan = useCallback((name) => {
@@ -46,19 +46,25 @@ export default function TwinViewer({ selectedOrgan, weight = 0, organsList = [] 
   }, [applyHighlights]);
 
   const handleLoad = () => {
-    // Apply weight and highlights after iframe loads
+    // Apply gender, weight and highlights after iframe loads
     setTimeout(() => {
       const win = iframeRef.current?.contentWindow;
       if (!win) return;
+      // setGender is a no-op for male (already loaded via URL param)
+      // but ensures the correct model is active
+      if (typeof win.setGender === 'function') win.setGender(gender);
       if (typeof win.setWeight === 'function') win.setWeight(weight);
       if (typeof win.highlightInjuredOrgans === 'function') win.highlightInjuredOrgans(organsList);
     }, 1200);
   };
 
+  // Pass gender as URL query param so main.js reads it on first load
+  const iframeSrc = `/twin/index.html?gender=${encodeURIComponent(gender || 'male')}`;
+
   return (
     <iframe
       ref={iframeRef}
-      src="/twin/index.html"
+      src={iframeSrc}
       className="w-full h-full border-0"
       style={{ background: 'transparent' }}
       title="Digital Twin 3D"

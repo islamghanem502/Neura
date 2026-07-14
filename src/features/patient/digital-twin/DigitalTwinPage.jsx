@@ -94,18 +94,18 @@ function FloatingTag({ organ, organsList }) {
   const borderColor = isHigh
     ? "border-l-red-500"
     : isMedium
-    ? "border-l-amber-500"
-    : isAffected
-    ? "border-l-yellow-400"
-    : "border-l-emerald-400";
+      ? "border-l-amber-500"
+      : isAffected
+        ? "border-l-yellow-400"
+        : "border-l-emerald-400";
 
   const pillStyle = isHigh
     ? "bg-red-50 text-red-600 border border-red-100"
     : isMedium
-    ? "bg-amber-50 text-amber-600 border border-amber-100"
-    : isAffected
-    ? "bg-yellow-50 text-yellow-700 border border-yellow-100"
-    : "bg-emerald-50 text-emerald-600 border border-emerald-100";
+      ? "bg-amber-50 text-amber-600 border border-amber-100"
+      : isAffected
+        ? "bg-yellow-50 text-yellow-700 border border-yellow-100"
+        : "bg-emerald-50 text-emerald-600 border border-emerald-100";
 
   return (
     <div
@@ -114,9 +114,8 @@ function FloatingTag({ organ, organsList }) {
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
         <div
-          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-            isAffected ? "bg-red-50 border border-red-100" : "bg-slate-50 border border-slate-100"
-          }`}
+          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isAffected ? "bg-red-50 border border-red-100" : "bg-slate-50 border border-slate-100"
+            }`}
         >
           <Icon size={16} className={info.color} />
         </div>
@@ -128,13 +127,12 @@ function FloatingTag({ organ, organsList }) {
         </div>
         {isAffected && (
           <span
-            className={`ml-auto text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full shrink-0 ${
-              isHigh
+            className={`ml-auto text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full shrink-0 ${isHigh
                 ? "bg-red-500 text-white animate-pulse"
                 : isMedium
-                ? "bg-amber-500 text-white"
-                : "bg-yellow-400 text-zinc-900"
-            }`}
+                  ? "bg-amber-500 text-white"
+                  : "bg-yellow-400 text-zinc-900"
+              }`}
           >
             Affected
           </span>
@@ -180,6 +178,10 @@ export default function DigitalTwinPage() {
   const [twin, setTwin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Resolve patient gender for the 3D model (female → Female-V1.glb, male → Man-v1.glb)
+  const [patientGender, setPatientGender] = useState(
+    (user?.gender || 'male').toLowerCase()
+  );
 
   const [selectedOrgan, setSelectedOrgan] = useState(null);
   const [simData, setSimData] = useState(null);
@@ -202,6 +204,15 @@ export default function DigitalTwinPage() {
         setTwin(res?.data || null);
         const w = weightKgFromVitals(res?.data?.currentState?.vitals);
         setModelWeight(Math.min(Math.max((w - 50) / 100, 0), 1));
+        // Resolve gender: user context first, fall back to profile API
+        if (user?.gender) {
+          setPatientGender(user.gender.toLowerCase());
+        } else {
+          try {
+            const basicInfo = await patientService.getBasicInfo();
+            if (basicInfo?.gender) setPatientGender(basicInfo.gender.toLowerCase());
+          } catch (_) {}
+        }
       } catch (err) {
         console.error("Digital Twin fetch error:", err);
         const resData = err?.response?.data;
@@ -215,7 +226,7 @@ export default function DigitalTwinPage() {
         const isNotFound =
           err?.response?.status === 404 ||
           /not found|no digital twin/i.test(msg);
-          
+
         if (isNotFound) {
           const setupDone = localStorage.getItem("neura_dt_setup_done") === "true";
           if (!setupDone) {
@@ -252,9 +263,9 @@ export default function DigitalTwinPage() {
             });
             setModelWeight(Math.min(Math.max((w - 50) / 100, 0), 1));
             toast(
-              isNotFound 
-                ? "Digital Twin not generated yet — showing profile data" 
-                : "Digital Twin loaded with limited data — backend BMI issue", 
+              isNotFound
+                ? "Digital Twin not generated yet — showing profile data"
+                : "Digital Twin loaded with limited data — backend BMI issue",
               { icon: isNotFound ? "ℹ️" : "⚠️" }
             );
           } catch (profileErr) {
@@ -398,6 +409,7 @@ export default function DigitalTwinPage() {
                 selectedOrgan={selectedOrgan}
                 weight={modelWeight}
                 organsList={simData?.affected_organs || twin?.currentState?.affectedOrgans || []}
+                gender={patientGender}
               />
               {isSimulating && (
                 <div className="absolute inset-0 bg-white/40 backdrop-blur-md flex items-center justify-center z-50">
@@ -425,7 +437,7 @@ export default function DigitalTwinPage() {
               {/* Health Score */}
               <div className="bg-white rounded-3xl p-6 shadow-sm border border-zinc-100 flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full blur-2xl -mr-6 -mt-6 transition-all group-hover:bg-blue-100" />
-                
+
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
@@ -441,9 +453,8 @@ export default function DigitalTwinPage() {
                     </div>
                   </div>
                   {scoreChange && (
-                    <span className={`text-xs font-black px-2.5 py-1 rounded-full flex items-center gap-0.5 ${
-                      scoreChange > 0 ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
-                    }`}>
+                    <span className={`text-xs font-black px-2.5 py-1 rounded-full flex items-center gap-0.5 ${scoreChange > 0 ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
+                      }`}>
                       {scoreChange > 0 ? "+" : ""}
                       {scoreChange} points
                     </span>
@@ -485,9 +496,8 @@ export default function DigitalTwinPage() {
                       </span>
                     </div>
                   </div>
-                  <span className={`text-xs font-black px-2.5 py-1 rounded-full ${
-                    bmiWarn ? "bg-amber-50 text-amber-600 border border-amber-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                  }`}>
+                  <span className={`text-xs font-black px-2.5 py-1 rounded-full ${bmiWarn ? "bg-amber-50 text-amber-600 border border-amber-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                    }`}>
                     {bmiCat || "Unknown"}
                   </span>
                 </div>
@@ -500,7 +510,7 @@ export default function DigitalTwinPage() {
 
                 <div className="w-full mt-2">
                   <div className="relative w-full h-1.5 bg-zinc-100 rounded-full">
-                    <div 
+                    <div
                       className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-teal-600 border-2 border-white shadow-md transition-all duration-700"
                       style={{ left: `${Math.min(Math.max(((bmi - 15) / 20) * 100, 0), 100)}%` }}
                     />
